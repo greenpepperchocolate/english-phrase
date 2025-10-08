@@ -1,0 +1,23 @@
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { AuthProvider } from '../src/providers/AuthProvider';
+import { AppQueryClientProvider } from '../src/providers/QueryProvider';
+import { AuthBoundary } from '../src/components/AuthBoundary';
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <AppQueryClientProvider>
+        <AuthBoundary>
+          <StatusBar style="auto" />
+          <Stack>
+            <Stack.Screen name="index" options={{ title: 'English-Now' }} />
+            <Stack.Screen name="phrase/[id]" options={{ title: '' }} />
+            <Stack.Screen name="favorites" options={{ title: 'favorites' }} />
+            <Stack.Screen name="settings" options={{ title: '設定' }} />
+          </Stack>
+        </AuthBoundary>
+      </AppQueryClientProvider>
+    </AuthProvider>
+  );
+}
