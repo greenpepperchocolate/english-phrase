@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, StyleSheet, View, ViewToken } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View, ViewToken } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFeed } from '../hooks/useFeed';
 import { useFavorites } from '../hooks/useFavorites';

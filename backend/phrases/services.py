@@ -59,6 +59,133 @@ def get_user_settings(user) -> Any:
     return setting
 
 
+def send_verification_email(user, token: str) -> None:
+    """
+    メール確認用のメールを送信
+
+    Args:
+        user: Userオブジェクト
+        token: 確認用トークン（UUID）
+    """
+    from django.core.mail import send_mail
+    from django.conf import settings
+
+    verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+
+    subject = "English Phrase - Verify your email address"
+    message = f"""
+Welcome to English Phrase!
+
+Please verify your email address by clicking the link below:
+
+{verification_url}
+
+This link will expire in 24 hours.
+
+If you didn't create an account, please ignore this email.
+
+Best regards,
+English Phrase Team
+"""
+
+    html_message = f"""
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #1d4ed8;">Welcome to English Phrase!</h2>
+        <p>Please verify your email address by clicking the button below:</p>
+        <div style="margin: 30px 0;">
+            <a href="{verification_url}"
+               style="background-color: #1d4ed8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Verify Email Address
+            </a>
+        </div>
+        <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+        <p style="color: #1d4ed8; font-size: 14px; word-break: break-all;">{verification_url}</p>
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+            This link will expire in 24 hours.<br>
+            If you didn't create an account, please ignore this email.
+        </p>
+    </div>
+</body>
+</html>
+"""
+
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
+
+def send_password_reset_email(user, token: str) -> None:
+    """
+    パスワードリセット用のメールを送信
+
+    Args:
+        user: Userオブジェクト
+        token: リセット用トークン（UUID）
+    """
+    from django.core.mail import send_mail
+    from django.conf import settings
+
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
+    subject = "English Phrase - Reset your password"
+    message = f"""
+Hello,
+
+You requested to reset your password for English Phrase.
+
+Please click the link below to reset your password:
+
+{reset_url}
+
+This link will expire in 1 hour.
+
+If you didn't request a password reset, please ignore this email.
+
+Best regards,
+English Phrase Team
+"""
+
+    html_message = f"""
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #1d4ed8;">Reset Your Password</h2>
+        <p>You requested to reset your password for English Phrase.</p>
+        <p>Click the button below to reset your password:</p>
+        <div style="margin: 30px 0;">
+            <a href="{reset_url}"
+               style="background-color: #1d4ed8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Reset Password
+            </a>
+        </div>
+        <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+        <p style="color: #1d4ed8; font-size: 14px; word-break: break-all;">{reset_url}</p>
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+            This link will expire in 1 hour.<br>
+            If you didn't request a password reset, please ignore this email.
+        </p>
+    </div>
+</body>
+</html>
+"""
+
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
+
 def _get_content_type(file_obj, key: str) -> str:
     """ファイルの適切なContent-Typeを判定"""
     import mimetypes

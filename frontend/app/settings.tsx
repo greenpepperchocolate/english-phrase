@@ -40,44 +40,62 @@ export default function SettingsScreen() {
   }
 
   if (settingsQuery.isError) {
+    console.error('Settings error:', settingsQuery.error);
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.label}>Error loading settings</Text>
+          <Text style={styles.errorText}>{settingsQuery.error?.message || 'Unknown error'}</Text>
           <Button title="Retry" onPress={() => settingsQuery.refetch()} />
         </View>
       </SafeAreaView>
     );
   }
 
+  const isGuest = tokens?.anonymous;
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Show Japanese text</Text>
-          <Switch value={showJapanese} onValueChange={setShowJapanese} />
+      {isGuest && (
+        <View style={styles.guestNotice}>
+          <Text style={styles.guestNoticeIcon}>🔒</Text>
+          <Text style={styles.guestNoticeTitle}>Guest Account</Text>
+          <Text style={styles.guestNoticeText}>
+            Settings are not saved for guest accounts. Create an account to save your preferences!
+          </Text>
+          <Pressable style={styles.signUpPromptButton} onPress={signOut}>
+            <Text style={styles.signUpPromptButtonText}>Sign Up / Sign In</Text>
+          </Pressable>
         </View>
-        <Text style={styles.label}>Repeat count (times per video)</Text>
+      )}
+
+      <View style={[styles.card, isGuest && styles.cardDisabled]}>
+        <View style={styles.switchRow}>
+          <Text style={[styles.label, isGuest && styles.labelDisabled]}>Show Japanese text</Text>
+          <Switch value={showJapanese} onValueChange={setShowJapanese} disabled={isGuest} />
+        </View>
+        <Text style={[styles.label, isGuest && styles.labelDisabled]}>Repeat count (times per video)</Text>
         <View style={styles.repeatCountContainer}>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
             <Pressable
               key={count}
-              style={[styles.repeatButton, repeatCount === count && styles.repeatButtonActive]}
-              onPress={() => setRepeatCount(count)}
+              style={[styles.repeatButton, repeatCount === count && styles.repeatButtonActive, isGuest && styles.repeatButtonDisabled]}
+              onPress={() => !isGuest && setRepeatCount(count)}
+              disabled={isGuest}
             >
-              <Text style={[styles.repeatButtonText, repeatCount === count && styles.repeatButtonTextActive]}>
+              <Text style={[styles.repeatButtonText, repeatCount === count && styles.repeatButtonTextActive, isGuest && styles.repeatButtonTextDisabled]}>
                 {count}
               </Text>
             </Pressable>
           ))}
         </View>
-        <Text style={styles.hint}>
+        <Text style={[styles.hint, isGuest && styles.hintDisabled]}>
           {repeatCount === 1 ? '1 time = auto-swipe after 1 play' : `${repeatCount} times = auto-swipe after ${repeatCount} plays`}
         </Text>
-        <Button title="Save" onPress={handleSave} disabled={updateSettings.isPending} />
+        {!isGuest && <Button title="Save" onPress={handleSave} disabled={updateSettings.isPending} />}
       </View>
       <View style={styles.footer}>
-        <Text style={styles.info}>{tokens?.anonymous ? 'Guest account' : 'Signed in'}</Text>
+        <Text style={styles.info}>{isGuest ? 'Guest account' : 'Signed in'}</Text>
         <Button title="Sign out" onPress={signOut} />
       </View>
     </SafeAreaView>
@@ -155,5 +173,63 @@ const styles = StyleSheet.create({
   info: {
     textAlign: 'center',
     color: '#475569',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ef4444',
+    marginVertical: 8,
+  },
+  guestNotice: {
+    backgroundColor: '#fef3c7',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fbbf24',
+  },
+  guestNoticeIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  guestNoticeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#92400e',
+    marginBottom: 8,
+  },
+  guestNoticeText: {
+    fontSize: 14,
+    color: '#78350f',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  signUpPromptButton: {
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  signUpPromptButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cardDisabled: {
+    opacity: 0.5,
+  },
+  labelDisabled: {
+    color: '#94a3b8',
+  },
+  repeatButtonDisabled: {
+    backgroundColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
+  },
+  repeatButtonTextDisabled: {
+    color: '#cbd5e1',
+  },
+  hintDisabled: {
+    color: '#cbd5e1',
   },
 });

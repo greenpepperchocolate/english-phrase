@@ -25,7 +25,14 @@ export default function FeedScreen() {
           <Pressable style={styles.actionButton} onPress={() => router.push('/favorites')} accessibilityRole="button">
             <Text style={styles.actionText}>★</Text>
           </Pressable>
-          <Pressable style={styles.actionButton} onPress={() => router.push('/settings')} accessibilityRole="button">
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => {
+              console.log('Settings button clicked');
+              router.push('/settings');
+            }}
+            accessibilityRole="button"
+          >
             <Text style={styles.actionText}>⚙</Text>
           </Pressable>
         </View>

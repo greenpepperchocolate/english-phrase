@@ -15,6 +15,27 @@ export default function RootLayout() {
             <Stack.Screen name="phrase/[id]" options={{ title: '' }} />
             <Stack.Screen name="favorites" options={{ title: 'favorites' }} />
             <Stack.Screen name="settings" options={{ title: '設定' }} />
+            <Stack.Screen
+              name="verify-email"
+              options={{
+                title: 'Email Verification',
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="forgot-password"
+              options={{
+                title: 'Forgot Password',
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="reset-password"
+              options={{
+                title: 'Reset Password',
+                headerShown: false,
+              }}
+            />
           </Stack>
         </AuthBoundary>
       </AppQueryClientProvider>

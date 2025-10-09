@@ -157,3 +157,13 @@ R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "phrases")
 R2_SIGNED_URL_TTL = int(os.environ.get("R2_SIGNED_URL_TTL", "600"))  # デフォルト10分
 # 公開コンテンツ用のCache-Control設定
 R2_CACHE_CONTROL_PUBLIC = "public, max-age=31536000, immutable"  # 1年キャッシュ
+
+# Email Configuration
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@englishphrase.com")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8081")

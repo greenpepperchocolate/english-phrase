@@ -32,6 +32,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const playbackLogger = usePlaybackLogger();
     const insets = useSafeAreaInsets();
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(true);
     const { settingsQuery } = useUserSettings();
     const playCountRef = useRef(0);
     const repeatCount = settingsQuery.data?.repeat_count ?? 1;
@@ -51,12 +52,25 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
     useEffect(() => {
       if (isActive) {
-        videoRef.current?.playAsync();
         playCountRef.current = 0; // 新しい動画になったらカウントリセット
+        setIsPlaying(true); // 新しい動画は自動再生
+        setIsVideoLoaded(false); // 動画をリロード
       } else {
         videoRef.current?.pauseAsync();
       }
     }, [isActive]);
+
+    useEffect(() => {
+      if (isActive && isPlaying) {
+        // 少し遅延させて動画が読み込まれるのを待つ
+        const timer = setTimeout(() => {
+          videoRef.current?.playAsync();
+        }, 100);
+        return () => clearTimeout(timer);
+      } else if (!isPlaying) {
+        videoRef.current?.pauseAsync();
+      }
+    }, [isActive, isPlaying]);
 
     const handlePlaybackStatus = (status: AVPlaybackStatus) => {
       // 動画が読み込まれたらサムネイルを非表示に
@@ -90,6 +104,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       }
     };
 
+    const handleVideoPress = () => {
+      setIsPlaying(!isPlaying);
+    };
+
     return (
       <View style={styles.container}>
         {phrase.video_url ? (
@@ -99,7 +117,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
               source={{ uri: phrase.video_url }}
               style={styles.video}
               resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={isActive}
+              shouldPlay={isActive && isPlaying}
               isLooping
               onPlaybackStatusUpdate={handlePlaybackStatus}
             />
@@ -111,6 +129,14 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                 resizeMode="contain"
               />
             )}
+            {/* 再生/停止用のタップエリア */}
+            <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
+              {!isPlaying && (
+                <View style={styles.playIconContainer}>
+                  <Text style={styles.playIcon}>▶</Text>
+                </View>
+              )}
+            </Pressable>
           </>
         ) : (
           <View style={styles.placeholder}>
@@ -163,6 +189,28 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
     backgroundColor: '#000000',
     marginTop: -80,
+  },
+  playPauseArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playIcon: {
+    fontSize: 40,
+    color: '#ffffff',
+    marginLeft: 5,
   },
   placeholder: {
     width: SCREEN_WIDTH,

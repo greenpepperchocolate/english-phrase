@@ -10,7 +10,18 @@ export function useUserSettings() {
 
   const settingsQuery = useQuery<UserSettings, Error>({
     queryKey: SETTINGS_KEY,
-    queryFn: () => authorizedFetch<UserSettings>('/settings'),
+    queryFn: async () => {
+      console.log('Fetching settings...');
+      try {
+        const result = await authorizedFetch<UserSettings>('/settings');
+        console.log('Settings fetched:', result);
+        return result;
+      } catch (error) {
+        console.error('Settings fetch error:', error);
+        throw error;
+      }
+    },
+    retry: 1,
   });
 
   const updateSettings = useMutation({

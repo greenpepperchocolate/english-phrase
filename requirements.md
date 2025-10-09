@@ -433,3 +433,19 @@ Cloudflare R2を設定します。以下の手順で進めてください。
   3. R2_SECRET_KEY: Secret Access Key
   4. R2_BUCKET_NAME: バケット名（english-phrase-mediaなど）
   5. R2_SIGNING_ENDPOINT: Endpoint URL（<https://xxxxx.r2.cloudflarestorage.com）>
+
+
+
+Gmailアプリパスワードの取得方法：
+
+  1. 2段階認証を有効化（まだの場合）
+    - <https://myaccount.google.com/security>
+    - 「2段階認証プロセス」を有効化
+  2. アプリパスワードを生成
+    - <https://myaccount.google.com/apppasswords>
+    - アプリを選択：「メール」
+    - デバイスを選択：「その他」→「Django」など
+    - 生成された16桁のパスワードをコピー
+  3. .envに設定
+  EMAIL_HOST_USER=あなたのメールアドレス@gmail.com
+  EMAIL_HOST_PASSWORD=生成された16桁のパスワード

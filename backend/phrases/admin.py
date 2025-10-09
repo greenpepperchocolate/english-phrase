@@ -190,3 +190,18 @@ class UserProgressAdmin(admin.ModelAdmin):
 class PlaybackLogAdmin(admin.ModelAdmin):
     list_display = ("user", "phrase", "play_ms", "completed", "created_at")
     list_filter = ("completed", "source")
+
+
+@admin.register(models.EmailVerificationToken)
+class EmailVerificationTokenAdmin(admin.ModelAdmin):
+    list_display = ("user", "is_verified", "verified_at", "created_at")
+    list_filter = ("is_verified",)
+    readonly_fields = ("token", "verified_at")
+
+
+@admin.register(models.PasswordResetToken)
+class PasswordResetTokenAdmin(admin.ModelAdmin):
+    list_display = ("user", "is_used", "expires_at", "used_at", "created_at")
+    list_filter = ("is_used",)
+    readonly_fields = ("token", "used_at", "expires_at")
+    ordering = ("-created_at",)

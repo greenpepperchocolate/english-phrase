@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+import uuid
 
 
 class TimeStampedModel(models.Model):
@@ -155,3 +156,44 @@ class PlaybackLog(models.Model):
 
     def __str__(self) -> str:
         return f"PlaybackLog<{self.user_id}:{self.phrase_id}>"
+
+
+class EmailVerificationToken(TimeStampedModel):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="email_verification")
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    is_verified = models.BooleanField(default=False)
+    verified_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return f"EmailVerification<{self.user.email}:{self.is_verified}>"
+
+    def verify(self) -> None:
+        self.is_verified = True
+        self.verified_at = timezone.now()
+        self.save(update_fields=["is_verified", "verified_at", "updated_at"])
+
+
+class PasswordResetToken(TimeStampedModel):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="password_reset_tokens")
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    is_used = models.BooleanField(default=False)
+    used_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self) -> str:
+        return f"PasswordReset<{self.user.email}:{self.is_used}>"
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            # デフォルト1時間有効
+            from datetime import timedelta
+            self.expires_at = timezone.now() + timedelta(hours=1)
+        super().save(*args, **kwargs)
+
+    def is_valid(self) -> bool:
+        return not self.is_used and timezone.now() < self.expires_at
+
+    def mark_as_used(self) -> None:
+        self.is_used = True
+        self.used_at = timezone.now()
+        self.save(update_fields=["is_used", "used_at", "updated_at"])

@@ -14,9 +14,21 @@ type LoginPayload = {
   password: string;
 };
 
+type SignUpPayload = {
+  email: string;
+  password: string;
+  password_confirm: string;
+};
+
+type SignUpResponse = {
+  message: string;
+  email: string;
+};
+
 type AuthContextValue = {
   tokens: AuthTokens | null;
   isBootstrapping: boolean;
+  signUp: (payload: SignUpPayload) => Promise<SignUpResponse>;
   signIn: (payload: LoginPayload) => Promise<void>;
   signInAnonymously: (deviceId?: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -133,6 +145,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [persistTokens, refreshing, tokens]);
 
+  const signUp = useCallback(async ({ email, password, password_confirm }: SignUpPayload): Promise<SignUpResponse> => {
+    const data = await fetchJson<SignUpResponse>('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, password_confirm }),
+    });
+    return data;
+  }, []);
+
   const signIn = useCallback(
     async ({ email, password }: LoginPayload) => {
       const data = await fetchJson<{ access_token: string; refresh_token: string; expires_in: number; anonymous: boolean }>(
@@ -205,8 +225,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ tokens, isBootstrapping, signIn, signInAnonymously, signOut, authorizedFetch }),
-    [authorizedFetch, isBootstrapping, signIn, signInAnonymously, signOut, tokens]
+    () => ({ tokens, isBootstrapping, signUp, signIn, signInAnonymously, signOut, authorizedFetch }),
+    [authorizedFetch, isBootstrapping, signUp, signIn, signInAnonymously, signOut, tokens]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

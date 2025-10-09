@@ -206,3 +206,33 @@ class EmailLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError(msg, code="authorization")
         attrs["user"] = user
         return attrs
+
+
+class SignUpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, min_length=6)
+    password_confirm = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        password = attrs.get("password")
+        password_confirm = attrs.get("password_confirm")
+
+        if password != password_confirm:
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError({"email": "This email is already registered."})
+
+        return attrs
+
+    def create(self, validated_data):
+        email = validated_data["email"]
+        password = validated_data["password"]
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password
+        )
+        return user

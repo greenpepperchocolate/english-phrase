@@ -87,6 +87,70 @@ class UserSettingsView(generics.GenericAPIView, mixins.RetrieveModelMixin, mixin
         return self.partial_update(request, *args, **kwargs)
 
 
+class AuthSignUpView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = serializers.SignUpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        # ユーザー設定を作成
+        services.get_user_settings(user)
+
+        # メール確認トークンを作成
+        verification_token = models.EmailVerificationToken.objects.create(user=user)
+
+        # 確認メールを送信
+        try:
+            services.send_verification_email(user, str(verification_token.token))
+        except Exception as e:
+            # メール送信エラーはログに記録するが、サインアップ自体は成功とする
+            print(f"Failed to send verification email: {e}")
+
+        return Response(
+            {
+                "message": "Account created successfully. Please check your email to verify your account.",
+                "email": user.email,
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+
+class EmailVerifyView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        token = request.data.get("token")
+        if not token:
+            return Response({"detail": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            verification = models.EmailVerificationToken.objects.get(token=token)
+
+            if verification.is_verified:
+                return Response({"detail": "Email already verified"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # トークンの有効期限チェック（24時間）
+            from datetime import timedelta
+            if verification.created_at < timezone.now() - timedelta(hours=24):
+                return Response(
+                    {"detail": "Verification token has expired. Please request a new one."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # メールを確認済みにする
+            verification.verify()
+
+            return Response(
+                {"message": "Email verified successfully. You can now log in."},
+                status=status.HTTP_200_OK
+            )
+
+        except models.EmailVerificationToken.DoesNotExist:
+            return Response({"detail": "Invalid verification token"}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class AuthLoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -101,6 +165,19 @@ class AuthLoginView(APIView):
         serializer = serializers.EmailLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
+
+        # メール確認チェック
+        try:
+            verification = models.EmailVerificationToken.objects.get(user=user)
+            if not verification.is_verified:
+                return Response(
+                    {"detail": "Please verify your email address before logging in. Check your inbox for the verification email."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except models.EmailVerificationToken.DoesNotExist:
+            # 古いユーザーアカウント（メール確認機能追加前）は許可
+            pass
+
         token = RefreshToken.for_user(user)
         services.get_user_settings(user)
         return Response(
@@ -198,3 +275,90 @@ class ProgressListView(generics.ListAPIView):
             .select_related("phrase", "expression")
             .order_by("-updated_at")
         )
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"detail": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+
+            # 既存の未使用トークンを無効化
+            models.PasswordResetToken.objects.filter(
+                user=user,
+                is_used=False
+            ).update(is_used=True)
+
+            # 新しいトークンを作成
+            reset_token = models.PasswordResetToken.objects.create(user=user)
+
+            # リセットメールを送信
+            try:
+                services.send_password_reset_email(user, str(reset_token.token))
+            except Exception as e:
+                print(f"Failed to send password reset email: {e}")
+
+            # セキュリティ上、ユーザーが存在するかどうかを明かさない
+            return Response(
+                {"message": "If an account with that email exists, a password reset link has been sent."},
+                status=status.HTTP_200_OK
+            )
+        except User.DoesNotExist:
+            # セキュリティ上、同じメッセージを返す
+            return Response(
+                {"message": "If an account with that email exists, a password reset link has been sent."},
+                status=status.HTTP_200_OK
+            )
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        token = request.data.get("token")
+        new_password = request.data.get("new_password")
+
+        if not token or not new_password:
+            return Response(
+                {"detail": "Token and new password are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 6:
+            return Response(
+                {"detail": "Password must be at least 6 characters long"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            reset_token = models.PasswordResetToken.objects.get(token=token)
+
+            if not reset_token.is_valid():
+                return Response(
+                    {"detail": "Password reset link has expired or been used. Please request a new one."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # パスワードを更新
+            user = reset_token.user
+            user.set_password(new_password)
+            user.save(update_fields=["password"])
+
+            # トークンを使用済みにする
+            reset_token.mark_as_used()
+
+            return Response(
+                {"message": "Password has been reset successfully. You can now log in with your new password."},
+                status=status.HTTP_200_OK
+            )
+
+        except models.PasswordResetToken.DoesNotExist:
+            return Response(
+                {"detail": "Invalid password reset link"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
