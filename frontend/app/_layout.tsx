@@ -11,9 +11,33 @@ export default function RootLayout() {
         <AuthBoundary>
           <StatusBar style="auto" />
           <Stack>
-            <Stack.Screen name="index" options={{ title: 'English-Now' }} />
+            <Stack.Screen
+              name="index"
+              options={{
+                title: 'English-Now',
+                headerStyle: {
+                  backgroundColor: '#1d4ed8',
+                },
+                headerTintColor: '#ffffff',
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }}
+            />
             <Stack.Screen name="phrase/[id]" options={{ title: '' }} />
-            <Stack.Screen name="favorites" options={{ title: 'favorites' }} />
+            <Stack.Screen
+              name="favorites"
+              options={{
+                title: 'favorites',
+                headerStyle: {
+                  backgroundColor: '#1d4ed8',
+                },
+                headerTintColor: '#ffffff',
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }}
+            />
             <Stack.Screen name="settings" options={{ title: '設定' }} />
             <Stack.Screen
               name="verify-email"

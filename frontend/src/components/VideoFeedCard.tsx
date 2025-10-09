@@ -1,10 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PhraseSummary } from '../api/types';
 import { usePlaybackLogger } from '../hooks/usePlaybackLogger';
 import { useUserSettings } from '../hooks/useUserSettings';
+import { useAuth } from '../providers/AuthProvider';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -15,6 +16,7 @@ interface Props {
   onToggleFavorite: (next: boolean) => void;
   onPress: () => void;
   onAutoSwipe?: () => void;
+  isGuest?: boolean;
 }
 
 export interface VideoFeedCardRef {
@@ -27,15 +29,17 @@ function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatus
 }
 
 export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
-  ({ phrase, isActive, isFavorite, onToggleFavorite, onPress, onAutoSwipe }, ref) => {
+  ({ phrase, isActive, isFavorite, onToggleFavorite, onPress, onAutoSwipe, isGuest = false }, ref) => {
     const videoRef = useRef<Video | null>(null);
     const playbackLogger = usePlaybackLogger();
     const insets = useSafeAreaInsets();
+    const { signOut } = useAuth();
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
     const { settingsQuery } = useUserSettings();
     const playCountRef = useRef(0);
     const repeatCount = settingsQuery.data?.repeat_count ?? 1;
+    const showJapanese = settingsQuery.data?.show_japanese ?? true;
 
     useImperativeHandle(ref, () => ({
       play: async () => {
@@ -108,6 +112,21 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       setIsPlaying(!isPlaying);
     };
 
+    const handleFavoritePress = () => {
+      if (isGuest) {
+        Alert.alert(
+          'Account Required',
+          'Favorites feature is only available for registered users. Please create an account to save your favorite videos.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign Up', onPress: () => signOut() },
+          ]
+        );
+        return;
+      }
+      onToggleFavorite(!isFavorite);
+    };
+
     return (
       <View style={styles.container}>
         {phrase.video_url ? (
@@ -149,7 +168,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           {/* 右下のお気に入りボタン */}
           <View style={styles.favoriteButtonContainer}>
             <Pressable
-              onPress={() => onToggleFavorite(!isFavorite)}
+              onPress={handleFavoritePress}
               style={[styles.favoriteButton, isFavorite && styles.favoriteButtonActive]}
             >
               <Text style={styles.favoriteIcon}>{isFavorite ? '★' : '☆'}</Text>
@@ -161,7 +180,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
         {/* テキスト情報（動画の上にオーバーレイ） */}
         <Pressable style={styles.textOverlay} onPress={onPress}>
           <Text style={styles.phraseText}>{phrase.text}</Text>
-          <Text style={styles.meaningText}>{phrase.meaning}</Text>
+          {showJapanese && <Text style={styles.meaningText}>{phrase.meaning}</Text>}
         </Pressable>
       </View>
     );

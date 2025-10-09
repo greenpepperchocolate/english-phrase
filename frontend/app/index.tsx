@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
-import { Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../src/providers/AuthProvider';
 import { FeedList } from '../src/components/FeedList';
 
 const TOPICS = [
@@ -12,7 +13,23 @@ const TOPICS = [
 
 export default function FeedScreen() {
   const router = useRouter();
+  const { tokens, signOut } = useAuth();
   const [topic, setTopic] = useState<string | undefined>(undefined); // 全てのトピックを表示
+
+  const handleFavoritesPress = () => {
+    if (tokens?.anonymous) {
+      Alert.alert(
+        'Account Required',
+        'Favorites feature is only available for registered users. Please create an account to save your favorite videos.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign Up', onPress: () => signOut() },
+        ]
+      );
+      return;
+    }
+    router.push('/favorites');
+  };
 
   return (
     <View style={styles.container}>
@@ -22,7 +39,7 @@ export default function FeedScreen() {
       <View style={styles.topOverlay}>
         <Text style={styles.title}></Text>
         <View style={styles.actions}>
-          <Pressable style={styles.actionButton} onPress={() => router.push('/favorites')} accessibilityRole="button">
+          <Pressable style={styles.actionButton} onPress={handleFavoritesPress} accessibilityRole="button">
             <Text style={styles.actionText}>★</Text>
           </Pressable>
           <Pressable
@@ -71,8 +88,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 12,
+    paddingTop: 32,
+    paddingBottom: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   title: {
@@ -105,7 +122,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 100,
+    top: 80,
     zIndex: 10,
     flexDirection: 'row',
     flexWrap: 'wrap',

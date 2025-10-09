@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useCallback } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View, ViewToken } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../providers/AuthProvider';
 import { useFeed } from '../hooks/useFeed';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToggleFavorite } from '../hooks/useToggleFavorite';
@@ -15,6 +16,7 @@ interface Props {
 
 export function FeedList({ topic }: Props) {
   const router = useRouter();
+  const { tokens } = useAuth();
   const feed = useFeed({ topic, pageSize: 10 });
   const favorites = useFavorites();
   const toggleFavorite = useToggleFavorite();
@@ -25,7 +27,8 @@ export function FeedList({ topic }: Props) {
     if (!favorites.data) {
       return new Set<number>();
     }
-    return new Set<number>(favorites.data.map((item) => item.phrase?.id).filter((id): id is number => Boolean(id)));
+    const allFavorites = favorites.data.pages.flatMap((page) => page.results);
+    return new Set<number>(allFavorites.map((item) => item.id));
   }, [favorites.data]);
 
   const originalItems = useMemo(() => feed.data?.pages.flatMap((page) => page.results) ?? [], [feed.data]);
@@ -100,6 +103,7 @@ export function FeedList({ topic }: Props) {
       onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
       onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
       onAutoSwipe={handleAutoSwipe}
+      isGuest={tokens?.anonymous}
     />
   );
 

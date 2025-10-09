@@ -247,19 +247,26 @@ class MediaSignedUrlView(APIView):
 
 
 class FavoritesListView(generics.ListAPIView):
-    serializer_class = serializers.UserProgressSerializer
+    serializer_class = serializers.PhraseFeedSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
+    pagination_class = FeedPagination
     ordering = "-updated_at"
 
     def get_queryset(self):
-        return (
+        # お気に入りのphraseのみを取得
+        favorite_phrase_ids = (
             models.UserProgress.objects.filter(
                 user=self.request.user,
                 is_favorite=True,
+                phrase__isnull=False,
             )
-            .select_related("phrase", "expression")
-            .order_by("-updated_at")
+            .values_list("phrase_id", flat=True)
+        )
+
+        return (
+            models.Phrase.objects.filter(id__in=favorite_phrase_ids)
+            .prefetch_related("phraseexpression_set__expression")
+            .order_by("-created_at")
         )
 
 

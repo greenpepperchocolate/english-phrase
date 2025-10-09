@@ -3,11 +3,14 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { useLocalSearchParams } from 'expo-router';
 import { Video } from 'expo-av';
 import { usePhraseDetail } from '../../src/hooks/usePhraseDetail';
+import { useUserSettings } from '../../src/hooks/useUserSettings';
 
 export default function PhraseDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = useMemo(() => Number(params.id), [params.id]);
   const phraseQuery = usePhraseDetail(Number.isNaN(id) ? undefined : id);
+  const { settingsQuery } = useUserSettings();
+  const showJapanese = settingsQuery.data?.show_japanese ?? true;
 
   if (phraseQuery.isLoading || !phraseQuery.data) {
     return (
@@ -26,7 +29,7 @@ export default function PhraseDetailScreen() {
       ) : null}
       <Text style={styles.topic}>{phrase.topic}</Text>
       <Text style={styles.title}>{phrase.text}</Text>
-      <Text style={styles.meaning}>{phrase.meaning}</Text>
+      {showJapanese && <Text style={styles.meaning}>{phrase.meaning}</Text>}
       <View style={styles.metaRow}>
         <Text style={styles.meta}>{phrase.difficulty}</Text>
         <Text style={styles.meta}>{phrase.duration_sec}s</Text>
@@ -36,7 +39,7 @@ export default function PhraseDetailScreen() {
         {phrase.expressions.map((item) => (
           <View key={item.expression.id} style={styles.expressionRow}>
             <Text style={styles.expressionText}>{item.expression.text}</Text>
-            <Text style={styles.expressionMeaning}>{item.expression.meaning}</Text>
+            {showJapanese && <Text style={styles.expressionMeaning}>{item.expression.meaning}</Text>}
           </View>
         ))}
       </View>
