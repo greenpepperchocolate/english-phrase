@@ -78,6 +78,7 @@ class PhraseFeedSerializer(serializers.ModelSerializer):
     video_url = serializers.SerializerMethodField()
     audio_url = serializers.SerializerMethodField()
     scene_image_url = serializers.SerializerMethodField()
+    is_mastered = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Phrase
@@ -91,6 +92,7 @@ class PhraseFeedSerializer(serializers.ModelSerializer):
             "video_url",
             "audio_url",
             "scene_image_url",
+            "is_mastered",
         ]
 
     def get_video_url(self, obj: models.Phrase) -> str | None:
@@ -110,6 +112,17 @@ class PhraseFeedSerializer(serializers.ModelSerializer):
             return None
         # 画像は公開URL（署名不要）
         return services.build_media_url(obj.scene_image_key, sign=False)
+
+    def get_is_mastered(self, obj: models.Phrase) -> bool:
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        progress = models.UserProgress.objects.filter(
+            user=request.user,
+            phrase=obj,
+            expression=None,
+        ).first()
+        return progress.is_mastered if progress else False
 
 
 class SettingsSerializer(serializers.ModelSerializer):
@@ -173,6 +186,11 @@ class PlaybackLogSerializer(serializers.ModelSerializer):
 
 
 class FavoriteToggleSerializer(serializers.Serializer):
+    phrase_id = serializers.PrimaryKeyRelatedField(queryset=models.Phrase.objects.all(), source="phrase")
+    on = serializers.BooleanField(default=True)
+
+
+class MasteredToggleSerializer(serializers.Serializer):
     phrase_id = serializers.PrimaryKeyRelatedField(queryset=models.Phrase.objects.all(), source="phrase")
     on = serializers.BooleanField(default=True)
 

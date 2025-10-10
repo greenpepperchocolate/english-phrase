@@ -13,7 +13,9 @@ interface Props {
   phrase: PhraseSummary;
   isActive: boolean;
   isFavorite: boolean;
+  isMastered: boolean;
   onToggleFavorite: (next: boolean) => void;
+  onToggleMastered: (next: boolean) => void;
   onPress: () => void;
   onAutoSwipe?: () => void;
   isGuest?: boolean;
@@ -29,7 +31,7 @@ function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatus
 }
 
 export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
-  ({ phrase, isActive, isFavorite, onToggleFavorite, onPress, onAutoSwipe, isGuest = false }, ref) => {
+  ({ phrase, isActive, isFavorite, isMastered, onToggleFavorite, onToggleMastered, onPress, onAutoSwipe, isGuest = false }, ref) => {
     const videoRef = useRef<Video | null>(null);
     const playbackLogger = usePlaybackLogger();
     const insets = useSafeAreaInsets();
@@ -127,6 +129,21 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       onToggleFavorite(!isFavorite);
     };
 
+    const handleMasteredPress = () => {
+      if (isGuest) {
+        Alert.alert(
+          'Account Required',
+          'Mastered feature is only available for registered users. Please create an account to track your progress.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign Up', onPress: () => signOut() },
+          ]
+        );
+        return;
+      }
+      onToggleMastered(!isMastered);
+    };
+
     return (
       <View style={styles.container}>
         {phrase.video_url ? (
@@ -165,8 +182,18 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
         {/* オーバーレイコンテンツ */}
         <View style={styles.overlay}>
-          {/* 右下のKeepボタン */}
-          <View style={styles.favoriteButtonContainer}>
+          {/* 右下のボタングループ */}
+          <View style={styles.buttonGroup}>
+            {/* Masteredボタン */}
+            <Pressable
+              onPress={handleMasteredPress}
+              style={[styles.masteredButton, isMastered && styles.masteredButtonActive]}
+            >
+              <Text style={[styles.masteredButtonText, isMastered && styles.masteredButtonTextActive]}>
+                {isMastered ? '✓ Mastered' : 'Mastered'}
+              </Text>
+            </Pressable>
+            {/* Keepボタン */}
             <Pressable
               onPress={handleFavoritePress}
               style={[styles.favoriteButton, isFavorite && styles.favoriteButtonActive]}
@@ -246,10 +273,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
   },
-  favoriteButtonContainer: {
+  buttonGroup: {
     position: 'absolute',
-    right: 16,
+    left: 0,
+    right: 0,
     bottom: 140,
+    flexDirection: 'row',
+    columnGap: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   favoriteButton: {
     paddingHorizontal: 16,
@@ -290,8 +322,9 @@ const styles = StyleSheet.create({
   },
   phraseText: {
     color: '#ffffff',
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
+    fontFamily: 'Poppins-SemiBold',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.9)',
     textShadowOffset: { width: 0, height: 2 },
@@ -302,15 +335,40 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   meaningText: {
-    color: '#ffffff',
-    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 17,
+    fontWeight: '400',
+    fontFamily: 'NotoSansJP-Regular',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.9)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 8,
+  },
+  masteredButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  masteredButtonActive: {
+    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+    borderColor: '#3b82f6',
+  },
+  masteredButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  masteredButtonTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
   },
 });

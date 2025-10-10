@@ -26,6 +26,8 @@ class Expression(TimeStampedModel):
     phonetic = models.CharField(max_length=255, blank=True)
     image_key = models.CharField(max_length=255, blank=True)
     audio_key = models.CharField(max_length=255, blank=True)
+    video_key = models.CharField(max_length=255, blank=True)
+    scene_image_key = models.CharField(max_length=255, blank=True)
     parent = models.ForeignKey(
         "self",
         null=True,
@@ -112,6 +114,7 @@ class UserProgress(TimeStampedModel):
     replay_count = models.PositiveIntegerField(default=0)
     last_reviewed = models.DateTimeField(null=True, blank=True)
     is_favorite = models.BooleanField(default=False)
+    is_mastered = models.BooleanField(default=False)
 
     class Meta:
         constraints = [

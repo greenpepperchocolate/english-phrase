@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../src/providers/AuthProvider';
 import { useFavorites } from '../src/hooks/useFavorites';
 import { useToggleFavorite } from '../src/hooks/useToggleFavorite';
+import { useMasteredToggle } from '../src/hooks/useMasteredToggle';
 import { PhraseSummary } from '../src/api/types';
 import { VideoFeedCard, VideoFeedCardRef } from '../src/components/VideoFeedCard';
 
@@ -14,6 +15,7 @@ export default function FavoritesScreen() {
   const { tokens } = useAuth();
   const favorites = useFavorites();
   const toggleFavorite = useToggleFavorite();
+  const toggleMastered = useMasteredToggle();
   const [activeIndex, setActiveIndex] = useState(0);
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
 
@@ -63,8 +65,10 @@ export default function FavoritesScreen() {
       phrase={item}
       isActive={index === activeIndex}
       isFavorite={true}
+      isMastered={item.is_mastered}
       onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
       onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
+      onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
       onAutoSwipe={handleAutoSwipe}
       isGuest={tokens?.anonymous}
     />

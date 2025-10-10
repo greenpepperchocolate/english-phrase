@@ -28,6 +28,8 @@ class PhraseFeedView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
+        from django.db.models import Q, Exists, OuterRef
+
         topic = self.request.query_params.get("topic")
         difficulty = self.request.query_params.get("difficulty")
         qs = models.Phrase.objects.prefetch_related("phraseexpression_set__expression")
@@ -35,7 +37,21 @@ class PhraseFeedView(generics.ListAPIView):
             qs = qs.filter(topic__iexact=topic)
         if difficulty:
             qs = qs.filter(difficulty=difficulty)
-        return qs.order_by("-created_at")
+
+        # If user is authenticated, prioritize non-mastered phrases
+        if self.request.user.is_authenticated:
+            mastered_subquery = models.UserProgress.objects.filter(
+                user=self.request.user,
+                phrase=OuterRef('pk'),
+                is_mastered=True
+            )
+            qs = qs.annotate(
+                is_mastered_by_user=Exists(mastered_subquery)
+            ).order_by('is_mastered_by_user', '-created_at')
+        else:
+            qs = qs.order_by("-created_at")
+
+        return qs
 
 
 class PhraseDetailView(generics.RetrieveAPIView):
@@ -63,6 +79,26 @@ class FavoriteToggleView(APIView):
         progress.last_reviewed = progress.last_reviewed or timezone.now()
         progress.save(update_fields=["is_favorite", "last_reviewed", "updated_at"])
         return Response({"phrase_id": phrase.id, "is_favorite": progress.is_favorite})
+
+
+class MasteredToggleView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = serializers.MasteredToggleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phrase = serializer.validated_data["phrase"]
+        is_on = serializer.validated_data.get("on", True)
+
+        progress, _ = models.UserProgress.objects.get_or_create(
+            user=request.user,
+            phrase=phrase,
+            expression=None,
+        )
+        progress.is_mastered = is_on
+        progress.last_reviewed = progress.last_reviewed or timezone.now()
+        progress.save(update_fields=["is_mastered", "last_reviewed", "updated_at"])
+        return Response({"phrase_id": phrase.id, "is_mastered": progress.is_mastered})
 
 
 class PlaybackLogCreateView(generics.CreateAPIView):

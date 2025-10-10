@@ -6,6 +6,7 @@ urlpatterns = [
     path("feed", views.PhraseFeedView.as_view(), name="feed"),
     path("phrase/<int:phrase_id>", views.PhraseDetailView.as_view(), name="phrase-detail"),
     path("favorites/toggle", views.FavoriteToggleView.as_view(), name="favorites-toggle"),
+    path("mastered/toggle", views.MasteredToggleView.as_view(), name="mastered-toggle"),
     path("favorites", views.FavoritesListView.as_view(), name="favorites"),
     path("progress", views.ProgressListView.as_view(), name="progress"),
     path("logs/play", views.PlaybackLogCreateView.as_view(), name="logs-play"),

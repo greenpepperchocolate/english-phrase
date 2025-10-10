@@ -5,6 +5,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { useFeed } from '../hooks/useFeed';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToggleFavorite } from '../hooks/useToggleFavorite';
+import { useMasteredToggle } from '../hooks/useMasteredToggle';
 import { PhraseSummary } from '../api/types';
 import { VideoFeedCard, VideoFeedCardRef } from './VideoFeedCard';
 
@@ -20,6 +21,7 @@ export function FeedList({ topic }: Props) {
   const feed = useFeed({ topic, pageSize: 10 });
   const favorites = useFavorites();
   const toggleFavorite = useToggleFavorite();
+  const toggleMastered = useMasteredToggle();
   const [activeIndex, setActiveIndex] = useState(0);
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
 
@@ -100,8 +102,10 @@ export function FeedList({ topic }: Props) {
       phrase={item}
       isActive={index === activeIndex}
       isFavorite={favoriteIds.has(item.id)}
+      isMastered={item.is_mastered}
       onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
       onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
+      onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
       onAutoSwipe={handleAutoSwipe}
       isGuest={tokens?.anonymous}
     />
