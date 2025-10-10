@@ -28,7 +28,7 @@ export default function RootLayout() {
             <Stack.Screen
               name="favorites"
               options={{
-                title: 'favorites',
+                title: 'Keep',
                 headerStyle: {
                   backgroundColor: '#1d4ed8',
                 },

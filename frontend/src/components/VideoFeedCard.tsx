@@ -116,7 +116,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       if (isGuest) {
         Alert.alert(
           'Account Required',
-          'Favorites feature is only available for registered users. Please create an account to save your favorite videos.',
+          'Keep feature is only available for registered users. Please create an account to save videos for later review.',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Sign Up', onPress: () => signOut() },
@@ -165,14 +165,14 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
         {/* オーバーレイコンテンツ */}
         <View style={styles.overlay}>
-          {/* 右下のお気に入りボタン */}
+          {/* 右下のKeepボタン */}
           <View style={styles.favoriteButtonContainer}>
             <Pressable
               onPress={handleFavoritePress}
               style={[styles.favoriteButton, isFavorite && styles.favoriteButtonActive]}
             >
               <Text style={styles.favoriteIcon}>{isFavorite ? '★' : '☆'}</Text>
-              <Text style={styles.favoriteLabel}>Favorite</Text>
+              <Text style={styles.favoriteLabel}>Keep</Text>
             </Pressable>
           </View>
         </View>

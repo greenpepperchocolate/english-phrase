@@ -20,7 +20,7 @@ export default function FeedScreen() {
     if (tokens?.anonymous) {
       Alert.alert(
         'Account Required',
-        'Favorites feature is only available for registered users. Please create an account to save your favorite videos.',
+        'Keep feature is only available for registered users. Please create an account to save videos for later review.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Sign Up', onPress: () => signOut() },

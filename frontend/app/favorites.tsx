@@ -108,8 +108,8 @@ export default function FavoritesScreen() {
       ListEmptyComponent={() => (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>⭐</Text>
-          <Text style={styles.emptyText}>No favorites yet</Text>
-          <Text style={styles.emptySubtext}>Tap the star icon on videos to add them to your favorites</Text>
+          <Text style={styles.emptyText}>No saved videos yet</Text>
+          <Text style={styles.emptySubtext}>Tap the Keep button on videos to save them for later review</Text>
         </View>
       )}
     />
