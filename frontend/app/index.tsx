@@ -1,7 +1,5 @@
 ﻿import { useState } from 'react';
-import { Alert, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../src/providers/AuthProvider';
+import { Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { FeedList } from '../src/components/FeedList';
 
 const TOPICS = [
@@ -12,50 +10,13 @@ const TOPICS = [
 ];
 
 export default function FeedScreen() {
-  const router = useRouter();
-  const { tokens, signOut } = useAuth();
   const [topic, setTopic] = useState<string | undefined>(undefined); // 全てのトピックを表示
-
-  const handleFavoritesPress = () => {
-    if (tokens?.anonymous) {
-      Alert.alert(
-        'Account Required',
-        'Keep feature is only available for registered users. Please create an account to save videos for later review.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign Up', onPress: () => signOut() },
-        ]
-      );
-      return;
-    }
-    router.push('/favorites');
-  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* トップオーバーレイアクション */}
-      <View style={styles.topOverlay}>
-        <Text style={styles.title}></Text>
-        <View style={styles.actions}>
-          <Pressable style={styles.actionButton} onPress={handleFavoritesPress} accessibilityRole="button">
-            <Text style={styles.actionText}>★</Text>
-          </Pressable>
-          <Pressable
-            style={styles.actionButton}
-            onPress={() => {
-              console.log('Settings button clicked');
-              router.push('/settings');
-            }}
-            accessibilityRole="button"
-          >
-            <Text style={styles.actionText}>⚙</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* トピック選択（横並び） */}
+      {/* トピック選択（ヘッダ位置に移動） */}
       <View style={styles.topicSelector}>
         {TOPICS.map((item) => (
           <Pressable
@@ -78,51 +39,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  topOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 32,
-    paddingBottom: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  actions: {
-    flexDirection: 'row',
-    columnGap: 12,
-  },
-  actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  actionText: {
-    fontSize: 20,
-    color: '#ffffff',
-  },
   topicSelector: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 80,
+    top: 40,
     zIndex: 10,
     flexDirection: 'row',
     flexWrap: 'wrap',

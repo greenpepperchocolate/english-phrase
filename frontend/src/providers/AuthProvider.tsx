@@ -51,30 +51,41 @@ class ApiError extends Error {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
+  const url = `${API_BASE_URL}${path}`;
+  console.log('📡 Fetching:', url);
 
-  if (!res.ok) {
-    let data: unknown = null;
-    const text = await res.text();
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch (error) {
-      data = text;
+  try {
+    const res = await fetch(url, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+    });
+
+    console.log('📥 Response status:', res.status);
+
+    if (!res.ok) {
+      let data: unknown = null;
+      const text = await res.text();
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (error) {
+        data = text;
+      }
+      console.error('❌ Request failed:', res.status, data);
+      throw new ApiError(res.statusText || 'Request failed', res.status, data);
     }
-    throw new ApiError(res.statusText || 'Request failed', res.status, data);
-  }
 
-  if (res.status === 204) {
-    return null as T;
-  }
+    if (res.status === 204) {
+      return null as T;
+    }
 
-  return res.json() as Promise<T>;
+    return res.json() as Promise<T>;
+  } catch (error) {
+    console.error('❌ Network error:', error);
+    throw error;
+  }
 }
 
 function hydrateTokens(data: { access_token: string; refresh_token: string; expires_in: number; anonymous: boolean }): AuthTokens {
@@ -170,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInAnonymously = useCallback(
     async (deviceId?: string) => {
+      console.log('🚀 Attempting anonymous login to:', `${API_BASE_URL}/auth/anonymous`);
       const data = await fetchJson<{ access_token: string; refresh_token: string; expires_in: number; anonymous: boolean }>(
         '/auth/anonymous',
         {
@@ -177,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ device_id: deviceId }),
         }
       );
+      console.log('✅ Anonymous login successful');
       const next = hydrateTokens(data);
       await persistTokens(next);
     },

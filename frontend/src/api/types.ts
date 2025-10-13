@@ -1,3 +1,21 @@
+export type Expression = {
+  id: number;
+  type: string;
+  text: string;
+  meaning: string;
+  phonetic: string;
+  image_key: string;
+  audio_key: string;
+  video_url: string | null;
+  scene_image_url: string | null;
+  order: number;
+};
+
+export type PhraseExpression = {
+  order: number;
+  expression: Expression;
+};
+
 export type PhraseSummary = {
   id: number;
   text: string;
@@ -9,22 +27,7 @@ export type PhraseSummary = {
   audio_url: string | null;
   scene_image_url: string | null;
   is_mastered: boolean;
-};
-
-export type Expression = {
-  id: number;
-  type: string;
-  text: string;
-  meaning: string;
-  phonetic: string;
-  image_key: string;
-  audio_key: string;
-  order: number;
-};
-
-export type PhraseExpression = {
-  order: number;
-  expression: Expression;
+  expressions: PhraseExpression[];
 };
 
 export type PhraseDetail = PhraseSummary & {

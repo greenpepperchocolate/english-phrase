@@ -73,9 +73,15 @@ DEFAULT_DB_URL = f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
 DATABASES = {
     "default": dj_database_url.parse(
         os.environ.get("DATABASE_URL", DEFAULT_DB_URL),
-        conn_max_age=600,
+        conn_max_age=0,  # SQLiteではコネクションプーリングを無効化
     )
 }
+
+# SQLite用の追加設定
+if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    DATABASES['default']['OPTIONS'] = {
+        'timeout': 20,  # ロック待機時間を20秒に設定
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -129,6 +135,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://192.168.3.4",
+    "http://192.168.3.4:8000",   # Django API
     "http://localhost:8081",
     "http://localhost:19006",
     "http://192.168.3.4:8081",   # LAN上のExpo DevTools

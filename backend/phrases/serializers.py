@@ -9,6 +9,9 @@ User = get_user_model()
 
 
 class ExpressionSerializer(serializers.ModelSerializer):
+    video_url = serializers.SerializerMethodField()
+    scene_image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = models.Expression
         fields = [
@@ -19,8 +22,21 @@ class ExpressionSerializer(serializers.ModelSerializer):
             "phonetic",
             "image_key",
             "audio_key",
+            "video_url",
+            "scene_image_url",
             "order",
         ]
+
+    def get_video_url(self, obj: models.Expression) -> str | None:
+        if not obj.video_key:
+            return None
+        use_signed_url = True
+        return services.build_media_url(obj.video_key, sign=use_signed_url)
+
+    def get_scene_image_url(self, obj: models.Expression) -> str | None:
+        if not obj.scene_image_key:
+            return None
+        return services.build_media_url(obj.scene_image_key, sign=False)
 
 
 class PhraseExpressionSerializer(serializers.ModelSerializer):
@@ -75,6 +91,7 @@ class PhraseSerializer(serializers.ModelSerializer):
 
 
 class PhraseFeedSerializer(serializers.ModelSerializer):
+    expressions = PhraseExpressionSerializer(many=True, source="phraseexpression_set")
     video_url = serializers.SerializerMethodField()
     audio_url = serializers.SerializerMethodField()
     scene_image_url = serializers.SerializerMethodField()
@@ -93,6 +110,7 @@ class PhraseFeedSerializer(serializers.ModelSerializer):
             "audio_url",
             "scene_image_url",
             "is_mastered",
+            "expressions",
         ]
 
     def get_video_url(self, obj: models.Phrase) -> str | None:

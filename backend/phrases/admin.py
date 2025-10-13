@@ -7,6 +7,8 @@ from . import models, services
 class ExpressionAdminForm(forms.ModelForm):
     image_upload = forms.FileField(required=False, help_text="画像ファイルをアップロード")
     audio_upload = forms.FileField(required=False, help_text="音声ファイルをアップロード")
+    video_upload = forms.FileField(required=False, help_text="動画ファイルをアップロード")
+    scene_image_upload = forms.FileField(required=False, help_text="シーン画像をアップロード")
 
     class Meta:
         model = models.Expression
@@ -31,27 +33,62 @@ class ExpressionAdminForm(forms.ModelForm):
             services.upload_to_r2(audio_file, key)
             instance.audio_key = key
 
+        # 動画ファイルのアップロード
+        if self.cleaned_data.get('video_upload'):
+            video_file = self.cleaned_data['video_upload']
+            ext = video_file.name.split('.')[-1]
+            key = f"expressions/videos/{uuid.uuid4()}.{ext}"
+
+            # 先にサムネイル生成（ファイルが閉じられる前に）
+            thumbnail_key = f"expressions/thumbnails/{uuid.uuid4()}.jpg"
+            generated_thumbnail = services.generate_video_thumbnail(video_file, thumbnail_key)
+            if generated_thumbnail:
+                instance.scene_image_key = generated_thumbnail
+
+            # その後、動画をアップロード
+            video_file.seek(0)
+            services.upload_to_r2(video_file, key)
+            instance.video_key = key
+
+        # シーン画像のアップロード
+        if self.cleaned_data.get('scene_image_upload'):
+            scene_image_file = self.cleaned_data['scene_image_upload']
+            ext = scene_image_file.name.split('.')[-1]
+            key = f"expressions/scene_images/{uuid.uuid4()}.{ext}"
+            services.upload_to_r2(scene_image_file, key)
+            instance.scene_image_key = key
+
         if commit:
             instance.save()
         return instance
 
 
+class ExpressionPhraseInline(admin.TabularInline):
+    model = models.PhraseExpression
+    extra = 1
+    verbose_name = "紐づけるPhrase"
+    verbose_name_plural = "紐づけるPhrases"
+
+
 @admin.register(models.Expression)
 class ExpressionAdmin(admin.ModelAdmin):
     form = ExpressionAdminForm
-    list_display = ("id", "type", "text", "order", "created_at", "has_audio", "has_image")
+    list_display = ("id", "type", "text", "order", "created_at", "has_audio", "has_image", "has_video")
     search_fields = ("text", "meaning")
     list_filter = ("type",)
+    inlines = [ExpressionPhraseInline]
     fieldsets = (
         ('基本情報', {
             'fields': ('type', 'text', 'meaning', 'phonetic', 'parent', 'order')
         }),
         ('メディアアップロード', {
-            'fields': ('image_upload', 'audio_upload'),
+            'fields': ('image_upload', 'audio_upload', 'video_upload', 'scene_image_upload'),
+            'description': 'ファイルをアップロードすると、自動的にR2に保存されます。動画をアップロードすると、サムネイルも自動生成されます'
         }),
         ('メディアキー（手動設定）', {
-            'fields': ('image_key', 'audio_key'),
+            'fields': ('image_key', 'audio_key', 'video_key', 'scene_image_key'),
             'classes': ('collapse',),
+            'description': '既にR2にアップロード済みのファイルのキーを直接指定できます'
         }),
     )
 
@@ -64,6 +101,11 @@ class ExpressionAdmin(admin.ModelAdmin):
         return bool(obj.image_key)
     has_image.boolean = True
     has_image.short_description = '画像'
+
+    def has_video(self, obj):
+        return bool(obj.video_key)
+    has_video.boolean = True
+    has_video.short_description = '動画'
 
 
 class PhraseExpressionInline(admin.TabularInline):
@@ -108,16 +150,17 @@ class PhraseAdminForm(forms.ModelForm):
             video_file = self.cleaned_data['video_file']
             ext = video_file.name.split('.')[-1]
             key = f"videos/{uuid.uuid4()}.{ext}"
-            services.upload_to_r2(video_file, key)
-            instance.video_key = key
 
-            # 動画の1フレーム目からサムネイルを自動生成
-            # video_fileを再度シークする必要があるため、再度取得
-            video_file.seek(0)
+            # 先にサムネイル生成（ファイルが閉じられる前に）
             thumbnail_key = f"thumbnails/{uuid.uuid4()}.jpg"
             generated_thumbnail = services.generate_video_thumbnail(video_file, thumbnail_key)
             if generated_thumbnail:
                 instance.scene_image_key = generated_thumbnail
+
+            # その後、動画をアップロード
+            video_file.seek(0)
+            services.upload_to_r2(video_file, key)
+            instance.video_key = key
 
         # 音声ファイルのアップロード
         if self.cleaned_data.get('audio_file'):

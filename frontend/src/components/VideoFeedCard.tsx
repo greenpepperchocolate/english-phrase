@@ -1,11 +1,13 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Alert, Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Alert, Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View, ViewToken } from 'react-native';
+import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PhraseSummary } from '../api/types';
+import { useRouter } from 'expo-router';
+import { Expression, PhraseSummary } from '../api/types';
 import { usePlaybackLogger } from '../hooks/usePlaybackLogger';
 import { useUserSettings } from '../hooks/useUserSettings';
 import { useAuth } from '../providers/AuthProvider';
+import { ExpressionVideoCard, ExpressionVideoCardRef } from './ExpressionVideoCard';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -33,15 +35,25 @@ function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatus
 export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
   ({ phrase, isActive, isFavorite, isMastered, onToggleFavorite, onToggleMastered, onPress, onAutoSwipe, isGuest = false }, ref) => {
     const videoRef = useRef<Video | null>(null);
+    const expressionVideoRefs = useRef<Map<number, ExpressionVideoCardRef>>(new Map());
     const playbackLogger = usePlaybackLogger();
     const insets = useSafeAreaInsets();
     const { signOut } = useAuth();
+    const router = useRouter();
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
     const { settingsQuery } = useUserSettings();
     const playCountRef = useRef(0);
     const repeatCount = settingsQuery.data?.repeat_count ?? 1;
     const showJapanese = settingsQuery.data?.show_japanese ?? true;
+    const [horizontalIndex, setHorizontalIndex] = useState(0);
+    const horizontalFlatListRef = useRef<FlatList>(null);
+
+    // 横スワイプアイテム: メインフレーズ + Expression動画
+    const horizontalItems = [
+      { type: 'phrase' as const, data: phrase },
+      ...(phrase.expressions || []).map(pe => ({ type: 'expression' as const, data: pe.expression }))
+    ];
 
     useImperativeHandle(ref, () => ({
       play: async () => {
@@ -56,27 +68,74 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       },
     }));
 
+    // Audio modeを設定（音声再生を有効化）
+    useEffect(() => {
+      Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+    }, []);
+
+    const onHorizontalViewableItemsChanged = useCallback(
+      ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+        if (viewableItems.length > 0) {
+          const index = viewableItems[0].index;
+          if (index !== null && index !== horizontalIndex) {
+            setHorizontalIndex(index);
+          }
+        }
+      },
+      [horizontalIndex]
+    );
+
+    const horizontalViewabilityConfig = useRef({
+      itemVisiblePercentThreshold: 80,
+    });
+
+    // phrase idが変わった時に横スワイプをリセット
+    useEffect(() => {
+      setHorizontalIndex(0);
+      horizontalFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }, [phrase.id]);
+
     useEffect(() => {
       if (isActive) {
-        playCountRef.current = 0; // 新しい動画になったらカウントリセット
-        setIsPlaying(true); // 新しい動画は自動再生
-        setIsVideoLoaded(false); // 動画をリロード
+        playCountRef.current = 0;
+        setIsPlaying(true);
+        setIsVideoLoaded(false);
       } else {
         videoRef.current?.pauseAsync();
+        // すべてのExpression動画も停止
+        expressionVideoRefs.current.forEach(ref => ref.pause());
       }
     }, [isActive]);
 
     useEffect(() => {
       if (isActive && isPlaying) {
-        // 少し遅延させて動画が読み込まれるのを待つ
         const timer = setTimeout(() => {
-          videoRef.current?.playAsync();
+          if (horizontalIndex === 0) {
+            // メインのフレーズ動画を再生
+            videoRef.current?.playAsync();
+            expressionVideoRefs.current.forEach(ref => ref.pause());
+          } else {
+            // Expression動画を再生
+            videoRef.current?.pauseAsync();
+            expressionVideoRefs.current.forEach((ref, index) => {
+              if (index === horizontalIndex - 1) {
+                ref.play();
+              } else {
+                ref.pause();
+              }
+            });
+          }
         }, 100);
         return () => clearTimeout(timer);
       } else if (!isPlaying) {
         videoRef.current?.pauseAsync();
+        expressionVideoRefs.current.forEach(ref => ref.pause());
       }
-    }, [isActive, isPlaying]);
+    }, [isActive, isPlaying, horizontalIndex]);
 
     const handlePlaybackStatus = (status: AVPlaybackStatus) => {
       // 動画が読み込まれたらサムネイルを非表示に
@@ -144,72 +203,137 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       onToggleMastered(!isMastered);
     };
 
-    return (
-      <View style={styles.container}>
-        {phrase.video_url ? (
-          <>
-            <Video
-              ref={videoRef}
-              source={{ uri: phrase.video_url }}
-              style={styles.video}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={isActive && isPlaying}
-              isLooping
-              onPlaybackStatusUpdate={handlePlaybackStatus}
-            />
-            {/* サムネイルプレビュー（動画読み込み中のみ表示） */}
-            {!isVideoLoaded && phrase.scene_image_url && (
-              <Image
-                source={{ uri: phrase.scene_image_url }}
-                style={styles.thumbnail}
-                resizeMode="contain"
-              />
+    const handleFavoritesListPress = () => {
+      if (isGuest) {
+        Alert.alert(
+          'Account Required',
+          'Keep feature is only available for registered users. Please create an account to save videos for later review.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign Up', onPress: () => signOut() },
+          ]
+        );
+        return;
+      }
+      router.push('/favorites');
+    };
+
+    const handleSettingsPress = () => {
+      router.push('/settings');
+    };
+
+    const renderHorizontalItem = ({ item, index }: { item: typeof horizontalItems[0]; index: number }) => {
+      if (item.type === 'phrase') {
+        return (
+          <View style={styles.container}>
+            {phrase.video_url ? (
+              <>
+                <Video
+                  ref={videoRef}
+                  source={{ uri: phrase.video_url }}
+                  style={styles.video}
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay={isActive && isPlaying && horizontalIndex === 0}
+                  isLooping
+                  onPlaybackStatusUpdate={handlePlaybackStatus}
+                />
+                {!isVideoLoaded && phrase.scene_image_url && (
+                  <Image
+                    source={{ uri: phrase.scene_image_url }}
+                    style={styles.thumbnail}
+                    resizeMode="contain"
+                  />
+                )}
+                <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
+                  {!isPlaying && (
+                    <View style={styles.playIconContainer}>
+                      <Text style={styles.playIcon}>▶</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </>
+            ) : (
+              <View style={styles.placeholder}>
+                <Text style={styles.placeholderText}>No video available</Text>
+              </View>
             )}
-            {/* 再生/停止用のタップエリア */}
-            <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
-              {!isPlaying && (
-                <View style={styles.playIconContainer}>
-                  <Text style={styles.playIcon}>▶</Text>
-                </View>
-              )}
-            </Pressable>
-          </>
-        ) : (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>No video available</Text>
-          </View>
-        )}
 
-        {/* オーバーレイコンテンツ */}
-        <View style={styles.overlay}>
-          {/* 右下のボタングループ */}
-          <View style={styles.buttonGroup}>
-            {/* Masteredボタン */}
-            <Pressable
-              onPress={handleMasteredPress}
-              style={[styles.masteredButton, isMastered && styles.masteredButtonActive]}
-            >
-              <Text style={[styles.masteredButtonText, isMastered && styles.masteredButtonTextActive]}>
-                {isMastered ? '✓ Mastered' : 'Mastered'}
-              </Text>
-            </Pressable>
-            {/* Keepボタン */}
-            <Pressable
-              onPress={handleFavoritePress}
-              style={[styles.favoriteButton, isFavorite && styles.favoriteButtonActive]}
-            >
-              <Text style={styles.favoriteIcon}>{isFavorite ? '★' : '☆'}</Text>
-              <Text style={styles.favoriteLabel}>Keep</Text>
+            <View style={styles.overlay}>
+              <View style={styles.buttonGroup}>
+                <Pressable
+                  onPress={handleMasteredPress}
+                  style={[styles.masteredButton, isMastered && styles.masteredButtonActive]}
+                >
+                  <Text style={[styles.masteredButtonText, isMastered && styles.masteredButtonTextActive]}>
+                    {isMastered ? '✓ Mastered' : 'Mastered'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleFavoritePress}
+                  style={[styles.favoriteButton, isFavorite && styles.favoriteButtonActive]}
+                >
+                  <Text style={styles.favoriteIcon}>{isFavorite ? '★' : '☆'}</Text>
+                  <Text style={styles.favoriteLabel}>Keep</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleFavoritesListPress}
+                  style={styles.iconButton}
+                >
+                  <Text style={styles.iconButtonText}>★</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSettingsPress}
+                  style={styles.iconButton}
+                >
+                  <Text style={styles.iconButtonText}>⚙</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <Pressable style={styles.textOverlay} onPress={onPress}>
+              <Text style={styles.phraseText}>{phrase.text}</Text>
+              {showJapanese && <Text style={styles.meaningText}>{phrase.meaning}</Text>}
             </Pressable>
           </View>
-        </View>
+        );
+      } else {
+        // Expression動画
+        return (
+          <ExpressionVideoCard
+            ref={(ref) => {
+              if (ref) {
+                expressionVideoRefs.current.set(index - 1, ref);
+              } else {
+                expressionVideoRefs.current.delete(index - 1);
+              }
+            }}
+            expression={item.data}
+            isActive={isActive && horizontalIndex === index}
+            showJapanese={showJapanese}
+          />
+        );
+      }
+    };
 
-        {/* テキスト情報（動画の上にオーバーレイ） */}
-        <Pressable style={styles.textOverlay} onPress={onPress}>
-          <Text style={styles.phraseText}>{phrase.text}</Text>
-          {showJapanese && <Text style={styles.meaningText}>{phrase.meaning}</Text>}
-        </Pressable>
-      </View>
+    return (
+      <FlatList
+        ref={horizontalFlatListRef}
+        data={horizontalItems}
+        keyExtractor={(item, index) => `${item.type}-${index}`}
+        renderItem={renderHorizontalItem}
+        horizontal
+        pagingEnabled
+        snapToInterval={SCREEN_WIDTH}
+        decelerationRate="fast"
+        showsHorizontalScrollIndicator={false}
+        onViewableItemsChanged={onHorizontalViewableItemsChanged}
+        viewabilityConfig={horizontalViewabilityConfig.current}
+        getItemLayout={(data, index) => ({
+          length: SCREEN_WIDTH,
+          offset: SCREEN_WIDTH * index,
+          index,
+        })}
+      />
     );
   }
 );
@@ -370,5 +494,19 @@ const styles = StyleSheet.create({
   masteredButtonTextActive: {
     color: '#ffffff',
     fontWeight: '700',
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  iconButtonText: {
+    fontSize: 20,
+    color: '#ffffff',
   },
 });
