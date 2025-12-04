@@ -33,21 +33,14 @@ export function FeedList({ topic }: Props) {
     return new Set<number>(allFavorites.map((item) => item.id));
   }, [favorites.data]);
 
-  const originalItems = useMemo(() => feed.data?.pages.flatMap((page) => page.results) ?? [], [feed.data]);
-
-  // 無限ループのためにアイテムを複製（3回繰り返す）
-  const items = useMemo(() => {
-    if (originalItems.length === 0) return [];
-    if (originalItems.length === 1) return originalItems; // 1件の場合はループ再生で対応
-    // 3回繰り返して疑似無限ループ
-    return [...originalItems, ...originalItems, ...originalItems];
-  }, [originalItems]);
+  const items = useMemo(() => feed.data?.pages.flatMap((page) => page.results) ?? [], [feed.data]);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0) {
         const index = viewableItems[0].index;
         if (index !== null && index !== activeIndex) {
+          console.log(`[FeedList] Viewable item changed: ${activeIndex} -> ${index}`);
           setActiveIndex(index);
         }
       }
@@ -62,15 +55,6 @@ export function FeedList({ topic }: Props) {
   const flatListRef = useRef<FlatList>(null);
 
   const handleEndReached = () => {
-    // 無限ループ：最後に到達したら最初に戻る
-    if (originalItems.length > 1 && items.length > 0) {
-      // 最初の動画にジャンプ（スムーズにスクロール）
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: 0, animated: false });
-        setActiveIndex(0);
-      }, 100);
-    }
-
     // 追加のページがあればフェッチ
     if (feed.hasNextPage && !feed.isFetchingNextPage) {
       feed.fetchNextPage();
@@ -80,15 +64,17 @@ export function FeedList({ topic }: Props) {
   const handleAutoSwipe = useCallback(() => {
     // 次の動画にスクロール
     const nextIndex = activeIndex + 1;
+    console.log(`[FeedList] Auto swipe: ${activeIndex} -> ${nextIndex}`);
     if (nextIndex < items.length) {
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-      setActiveIndex(nextIndex);
-    } else if (originalItems.length > 1) {
-      // 最後の動画の場合は最初に戻る
-      flatListRef.current?.scrollToIndex({ index: 0, animated: true });
-      setActiveIndex(0);
+      // scrollToIndexを呼ぶと、onViewableItemsChangedが呼ばれてactiveIndexが更新される
+      // ので、ここで手動で setActiveIndex を呼ぶ必要はない
     }
-  }, [activeIndex, items.length, originalItems.length]);
+    // 最後に近づいたら次のページをプリフェッチ（残り5件）
+    if (nextIndex >= items.length - 5 && feed.hasNextPage && !feed.isFetchingNextPage) {
+      feed.fetchNextPage();
+    }
+  }, [activeIndex, items.length, feed]);
 
   const renderItem = ({ item, index }: { item: PhraseSummary; index: number }) => (
     <VideoFeedCard
@@ -131,7 +117,7 @@ export function FeedList({ topic }: Props) {
     <FlatList
       ref={flatListRef}
       data={items}
-      keyExtractor={(item, index) => `${item.id}-${index}`}
+      keyExtractor={(item) => String(item.id)}
       renderItem={renderItem}
       pagingEnabled
       snapToInterval={SCREEN_HEIGHT}
@@ -140,18 +126,31 @@ export function FeedList({ topic }: Props) {
       onViewableItemsChanged={onViewableItemsChanged}
       viewabilityConfig={viewabilityConfig.current}
       onEndReached={handleEndReached}
-      onEndReachedThreshold={0.1}
+      onEndReachedThreshold={0.3}
       getItemLayout={(data, index) => ({
         length: SCREEN_HEIGHT,
         offset: SCREEN_HEIGHT * index,
         index,
       })}
+      // メモリ最適化設定
+      removeClippedSubviews={true}
+      windowSize={3}
+      maxToRenderPerBatch={2}
+      initialNumToRender={2}
+      updateCellsBatchingPeriod={50}
       ListEmptyComponent={() => (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>No videos available</Text>
           <Text style={styles.emptySubtext}>Add some phrases from the admin panel</Text>
         </View>
       )}
+      ListFooterComponent={() =>
+        feed.isFetchingNextPage ? (
+          <View style={styles.loadingFooter}>
+            <ActivityIndicator size="small" color="#ffffff" />
+          </View>
+        ) : null
+      }
     />
   );
 }
@@ -184,5 +183,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 14,
     textAlign: 'center',
+  },
+  loadingFooter: {
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
   },
 });

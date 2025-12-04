@@ -100,7 +100,7 @@ class UserSetting(TimeStampedModel):
     playback_speed = models.DecimalField(max_digits=3, decimal_places=2, default=1.0)
     volume = models.DecimalField(max_digits=3, decimal_places=2, default=0.8)
     show_japanese = models.BooleanField(default=True)
-    repeat_count = models.PositiveIntegerField(default=1, help_text="Number of times to repeat each video (1-10)")
+    repeat_count = models.PositiveIntegerField(default=3, help_text="Number of times to repeat each video (1-10)")
 
     def __str__(self) -> str:
         return f"Setting<{self.user_id}>"

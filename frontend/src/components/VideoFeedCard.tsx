@@ -44,10 +44,16 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const [isPlaying, setIsPlaying] = useState(true);
     const { settingsQuery } = useUserSettings();
     const playCountRef = useRef(0);
-    const repeatCount = settingsQuery.data?.repeat_count ?? 1;
+    const repeatCount = settingsQuery.data?.repeat_count ?? 3;
     const showJapanese = settingsQuery.data?.show_japanese ?? true;
     const [horizontalIndex, setHorizontalIndex] = useState(0);
     const horizontalFlatListRef = useRef<FlatList>(null);
+    const [shouldPlayVideo, setShouldPlayVideo] = useState(true);
+
+    // デバッグ: repeatCountを確認
+    useEffect(() => {
+      console.log(`[VideoFeedCard] Settings loaded. repeat_count: ${settingsQuery.data?.repeat_count}, using: ${repeatCount}`);
+    }, [settingsQuery.data?.repeat_count, repeatCount]);
 
     // 横スワイプアイテム: メインフレーズ + Expression動画
     const horizontalItems = [
@@ -93,27 +99,36 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       itemVisiblePercentThreshold: 80,
     });
 
-    // phrase idが変わった時に横スワイプをリセット
+    // phrase idが変わった時に横スワイプとカウントをリセット
     useEffect(() => {
       setHorizontalIndex(0);
+      playCountRef.current = 0;
+      setShouldPlayVideo(true);
       horizontalFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      console.log(`[VideoFeedCard] Phrase changed to ${phrase.id}, reset playCount to 0`);
     }, [phrase.id]);
 
     useEffect(() => {
       if (isActive) {
-        playCountRef.current = 0;
         setIsPlaying(true);
         setIsVideoLoaded(false);
+        console.log(`[VideoFeedCard] Phrase ${phrase.id} activated`);
       } else {
+        // 非アクティブになったら動画を停止（メモリはFlatListのremoveClippedSubviewsで管理）
         videoRef.current?.pauseAsync();
+        console.log(`[VideoFeedCard] Phrase ${phrase.id} paused`);
         // すべてのExpression動画も停止
         expressionVideoRefs.current.forEach(ref => ref.pause());
       }
     }, [isActive]);
 
     useEffect(() => {
-      if (isActive && isPlaying) {
-        const timer = setTimeout(() => {
+      if (!isActive) {
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        if (isPlaying) {
           if (horizontalIndex === 0) {
             // メインのフレーズ動画を再生
             videoRef.current?.playAsync();
@@ -129,18 +144,24 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
               }
             });
           }
-        }, 100);
-        return () => clearTimeout(timer);
-      } else if (!isPlaying) {
-        videoRef.current?.pauseAsync();
-        expressionVideoRefs.current.forEach(ref => ref.pause());
-      }
+        } else {
+          videoRef.current?.pauseAsync();
+          expressionVideoRefs.current.forEach(ref => ref.pause());
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }, [isActive, isPlaying, horizontalIndex]);
 
     const handlePlaybackStatus = (status: AVPlaybackStatus) => {
       // 動画が読み込まれたらサムネイルを非表示に
       if (isPlaybackSuccess(status) && !isVideoLoaded) {
         setIsVideoLoaded(true);
+        console.log(`[VideoFeedCard] Phrase ${phrase.id} video loaded`);
+      }
+
+      // エラー時のみログ
+      if (!isPlaybackSuccess(status)) {
+        console.error(`[VideoFeedCard] Phrase ${phrase.id} playback error:`, status.error);
       }
 
       if (!isPlaybackSuccess(status) || !status.didJustFinish) {
@@ -150,6 +171,8 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       // 再生回数をインクリメント
       playCountRef.current += 1;
       const currentPlayCount = playCountRef.current;
+
+      console.log(`[VideoFeedCard] Phrase ${phrase.id} finished playing. Count: ${currentPlayCount}/${repeatCount}`);
 
       // PlaybackLogを記録
       if (!playbackLogger.isPending) {
@@ -162,10 +185,17 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       }
 
       // 指定回数に達したら自動スワイプ
-      if (currentPlayCount >= repeatCount && onAutoSwipe) {
-        setTimeout(() => {
-          onAutoSwipe();
-        }, 500); // 少し遅延させて自然な動きに
+      if (currentPlayCount >= repeatCount) {
+        console.log(`[VideoFeedCard] Reached repeat count ${repeatCount}, stopping video and auto swiping`);
+        setShouldPlayVideo(false);
+        if (onAutoSwipe) {
+          setTimeout(() => {
+            onAutoSwipe();
+          }, 500); // 少し遅延させて自然な動きに
+        }
+      } else {
+        console.log(`[VideoFeedCard] Video will loop automatically (${currentPlayCount}/${repeatCount})`);
+        // isLooping=trueなので自動的にループする
       }
     };
 
@@ -233,8 +263,8 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                   source={{ uri: phrase.video_url }}
                   style={styles.video}
                   resizeMode={ResizeMode.CONTAIN}
-                  shouldPlay={isActive && isPlaying && horizontalIndex === 0}
-                  isLooping
+                  shouldPlay={isActive && isPlaying && horizontalIndex === 0 && shouldPlayVideo}
+                  isLooping={true}
                   onPlaybackStatusUpdate={handlePlaybackStatus}
                 />
                 {!isVideoLoaded && phrase.scene_image_url && (

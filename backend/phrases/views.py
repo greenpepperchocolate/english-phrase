@@ -5,7 +5,7 @@ import secrets
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import generics, mixins, permissions, status
-from rest_framework.pagination import CursorPagination
+from rest_framework.pagination import CursorPagination, PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -15,11 +15,10 @@ from . import models, serializers, services
 User = get_user_model()
 
 
-class FeedPagination(CursorPagination):
+class FeedPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = "limit"
     max_page_size = 100
-    ordering = "-created_at"
 
 
 class PhraseFeedView(generics.ListAPIView):
@@ -38,7 +37,21 @@ class PhraseFeedView(generics.ListAPIView):
         if difficulty:
             qs = qs.filter(difficulty=difficulty)
 
-        # If user is authenticated, prioritize non-mastered phrases
+        from django.db.models import F
+        from django.db.models.functions import Mod, Cast
+        from django.db.models import IntegerField
+
+        # Get random seed from query params (generated per session by frontend)
+        seed_param = self.request.query_params.get('seed')
+        if seed_param:
+            try:
+                seed = int(seed_param)
+            except (ValueError, TypeError):
+                seed = 1  # Default seed if invalid
+        else:
+            seed = 1  # Default seed if not provided
+
+        # If user is authenticated, annotate is_mastered for filtering
         if self.request.user.is_authenticated:
             mastered_subquery = models.UserProgress.objects.filter(
                 user=self.request.user,
@@ -47,11 +60,25 @@ class PhraseFeedView(generics.ListAPIView):
             )
             qs = qs.annotate(
                 is_mastered_by_user=Exists(mastered_subquery)
-            ).order_by('is_mastered_by_user', '-created_at')
+            )
+            # Prioritize non-mastered phrases, then pseudo-random based on session seed
+            # This ensures consistent ordering across pagination for the same session
+            qs = qs.annotate(
+                random_order=Mod(
+                    Cast(F('id') * (seed * 2654435761), IntegerField()),
+                    1000000
+                )
+            )
+            return qs.order_by('is_mastered_by_user', 'random_order')
         else:
-            qs = qs.order_by("-created_at")
-
-        return qs
+            # For anonymous users, pseudo-random based on session seed
+            qs = qs.annotate(
+                random_order=Mod(
+                    Cast(F('id') * (seed * 2654435761), IntegerField()),
+                    1000000
+                )
+            )
+            return qs.order_by('random_order')
 
 
 class PhraseDetailView(generics.RetrieveAPIView):
@@ -286,9 +313,21 @@ class FavoritesListView(generics.ListAPIView):
     serializer_class = serializers.PhraseFeedSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = FeedPagination
-    ordering = "-updated_at"
 
     def get_queryset(self):
+        from django.db.models import Exists, OuterRef, F, IntegerField
+        from django.db.models.functions import Mod, Cast
+
+        # Get random seed from query params
+        seed_param = self.request.query_params.get('seed')
+        if seed_param:
+            try:
+                seed = int(seed_param)
+            except (ValueError, TypeError):
+                seed = 1
+        else:
+            seed = 1
+
         # お気に入りのphraseのみを取得
         favorite_phrase_ids = (
             models.UserProgress.objects.filter(
@@ -299,10 +338,25 @@ class FavoritesListView(generics.ListAPIView):
             .values_list("phrase_id", flat=True)
         )
 
+        # Annotate is_mastered status
+        mastered_subquery = models.UserProgress.objects.filter(
+            user=self.request.user,
+            phrase=OuterRef('pk'),
+            is_mastered=True
+        )
+
+        # Pseudo-random ordering based on session seed for consistent pagination
         return (
             models.Phrase.objects.filter(id__in=favorite_phrase_ids)
             .prefetch_related("phraseexpression_set__expression")
-            .order_by("-created_at")
+            .annotate(
+                is_mastered_by_user=Exists(mastered_subquery),
+                random_order=Mod(
+                    Cast(F('id') * (seed * 2654435761), IntegerField()),
+                    1000000
+                )
+            )
+            .order_by('is_mastered_by_user', 'random_order')
         )
 
 

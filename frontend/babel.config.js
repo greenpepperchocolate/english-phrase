@@ -3,9 +3,18 @@
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      ['inline-dotenv', {
-        path: '.env'
-      }],
+      'expo-router/babel',
+      [
+        'module:react-native-dotenv',
+        {
+          envName: 'APP_ENV',
+          moduleName: '@env',
+          path: '.env',
+          safe: false,
+          allowUndefined: true,
+          verbose: false,
+        },
+      ],
       'react-native-reanimated/plugin'
     ]
   };
