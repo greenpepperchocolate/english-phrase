@@ -49,11 +49,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const [horizontalIndex, setHorizontalIndex] = useState(0);
     const horizontalFlatListRef = useRef<FlatList>(null);
     const [shouldPlayVideo, setShouldPlayVideo] = useState(true);
-
-    // デバッグ: repeatCountを確認
-    useEffect(() => {
-      console.log(`[VideoFeedCard] Settings loaded. repeat_count: ${settingsQuery.data?.repeat_count}, using: ${repeatCount}`);
-    }, [settingsQuery.data?.repeat_count, repeatCount]);
+    const [tabBarHeight, setTabBarHeight] = useState(0);
 
     // 横スワイプアイテム: メインフレーズ + Expression動画
     const horizontalItems = [
@@ -104,19 +100,17 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       setHorizontalIndex(0);
       playCountRef.current = 0;
       setShouldPlayVideo(true);
+      setIsVideoLoaded(false);    // ロード状態もリセット
       horizontalFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-      console.log(`[VideoFeedCard] Phrase changed to ${phrase.id}, reset playCount to 0`);
     }, [phrase.id]);
 
     useEffect(() => {
       if (isActive) {
         setIsPlaying(true);
         setIsVideoLoaded(false);
-        console.log(`[VideoFeedCard] Phrase ${phrase.id} activated`);
       } else {
         // 非アクティブになったら動画を停止（メモリはFlatListのremoveClippedSubviewsで管理）
         videoRef.current?.pauseAsync();
-        console.log(`[VideoFeedCard] Phrase ${phrase.id} paused`);
         // すべてのExpression動画も停止
         expressionVideoRefs.current.forEach(ref => ref.pause());
       }
@@ -156,12 +150,6 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       // 動画が読み込まれたらサムネイルを非表示に
       if (isPlaybackSuccess(status) && !isVideoLoaded) {
         setIsVideoLoaded(true);
-        console.log(`[VideoFeedCard] Phrase ${phrase.id} video loaded`);
-      }
-
-      // エラー時のみログ
-      if (!isPlaybackSuccess(status)) {
-        console.error(`[VideoFeedCard] Phrase ${phrase.id} playback error:`, status.error);
       }
 
       if (!isPlaybackSuccess(status) || !status.didJustFinish) {
@@ -171,8 +159,6 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       // 再生回数をインクリメント
       playCountRef.current += 1;
       const currentPlayCount = playCountRef.current;
-
-      console.log(`[VideoFeedCard] Phrase ${phrase.id} finished playing. Count: ${currentPlayCount}/${repeatCount}`);
 
       // PlaybackLogを記録
       if (!playbackLogger.isPending) {
@@ -186,16 +172,12 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
       // 指定回数に達したら自動スワイプ
       if (currentPlayCount >= repeatCount) {
-        console.log(`[VideoFeedCard] Reached repeat count ${repeatCount}, stopping video and auto swiping`);
         setShouldPlayVideo(false);
         if (onAutoSwipe) {
           setTimeout(() => {
             onAutoSwipe();
           }, 500); // 少し遅延させて自然な動きに
         }
-      } else {
-        console.log(`[VideoFeedCard] Video will loop automatically (${currentPlayCount}/${repeatCount})`);
-        // isLooping=trueなので自動的にループする
       }
     };
 
@@ -252,8 +234,21 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       router.push('/settings');
     };
 
+    const handleTabPress = (targetIndex: number) => {
+      if (targetIndex !== horizontalIndex) {
+        horizontalFlatListRef.current?.scrollToIndex({ index: targetIndex, animated: true });
+      }
+    };
+
+    // Expression動画が存在するか確認
+    const hasExpressions = horizontalItems.length > 1;
+
     const renderHorizontalItem = ({ item, index }: { item: typeof horizontalItems[0]; index: number }) => {
       if (item.type === 'phrase') {
+        // タブバーがある場合は動画をヘッダーの下に配置（実測値を使用）
+        const videoMarginTop = hasExpressions && tabBarHeight > 0 ? tabBarHeight - 80 : -80;
+
+
         return (
           <View style={styles.container}>
             {phrase.video_url ? (
@@ -261,7 +256,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                 <Video
                   ref={videoRef}
                   source={{ uri: phrase.video_url }}
-                  style={styles.video}
+                  style={[styles.video, { marginTop: videoMarginTop }]}
                   resizeMode={ResizeMode.CONTAIN}
                   shouldPlay={isActive && isPlaying && horizontalIndex === 0 && shouldPlayVideo}
                   isLooping={true}
@@ -270,7 +265,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                 {!isVideoLoaded && phrase.scene_image_url && (
                   <Image
                     source={{ uri: phrase.scene_image_url }}
-                    style={styles.thumbnail}
+                    style={[styles.thumbnail, { marginTop: videoMarginTop }]}
                     resizeMode="contain"
                   />
                 )}
@@ -340,30 +335,57 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
             expression={item.data}
             isActive={isActive && horizontalIndex === index}
             showJapanese={showJapanese}
+            tabBarHeight={tabBarHeight}
           />
         );
       }
     };
 
     return (
-      <FlatList
-        ref={horizontalFlatListRef}
-        data={horizontalItems}
-        keyExtractor={(item, index) => `${item.type}-${index}`}
-        renderItem={renderHorizontalItem}
-        horizontal
-        pagingEnabled
-        snapToInterval={SCREEN_WIDTH}
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onHorizontalViewableItemsChanged}
-        viewabilityConfig={horizontalViewabilityConfig.current}
-        getItemLayout={(data, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
-          index,
-        })}
-      />
+      <View style={styles.wrapper}>
+        {/* タブバー（ヘッダー部分） */}
+        {hasExpressions && (
+          <View
+            style={[styles.tabBar, { paddingTop: insets.top }]}
+            onLayout={(event) => {
+              const { height } = event.nativeEvent.layout;
+              setTabBarHeight(height);
+            }}
+          >
+            <Pressable style={styles.tabItem} onPress={() => handleTabPress(0)}>
+              <Text style={[styles.tabText, horizontalIndex === 0 && styles.tabTextActive]}>
+                英単語
+              </Text>
+              {horizontalIndex === 0 && <View style={styles.tabUnderline} />}
+            </Pressable>
+            <Pressable style={styles.tabItem} onPress={() => handleTabPress(1)}>
+              <Text style={[styles.tabText, horizontalIndex > 0 && styles.tabTextActive]}>
+                サンプルフレーズ
+              </Text>
+              {horizontalIndex > 0 && <View style={styles.tabUnderline} />}
+            </Pressable>
+          </View>
+        )}
+
+        <FlatList
+          ref={horizontalFlatListRef}
+          data={horizontalItems}
+          keyExtractor={(item, index) => `${item.type}-${index}`}
+          renderItem={renderHorizontalItem}
+          horizontal
+          pagingEnabled
+          snapToInterval={SCREEN_WIDTH}
+          decelerationRate="fast"
+          showsHorizontalScrollIndicator={false}
+          onViewableItemsChanged={onHorizontalViewableItemsChanged}
+          viewabilityConfig={horizontalViewabilityConfig.current}
+          getItemLayout={(data, index) => ({
+            length: SCREEN_WIDTH,
+            offset: SCREEN_WIDTH * index,
+            index,
+          })}
+        />
+      </View>
     );
   }
 );
@@ -431,7 +453,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 140,
+    bottom: 80,
     flexDirection: 'row',
     columnGap: 12,
     alignItems: 'center',
@@ -467,7 +489,7 @@ const styles = StyleSheet.create({
   },
   textOverlay: {
     position: 'absolute',
-    bottom: 280,
+    bottom: 140,
     left: 0,
     right: 0,
     paddingHorizontal: 24,
@@ -538,5 +560,43 @@ const styles = StyleSheet.create({
   iconButtonText: {
     fontSize: 20,
     color: '#ffffff',
+  },
+  wrapper: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    backgroundColor: '#000000',
+  },
+  tabBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingBottom: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    zIndex: 10,
+  },
+  tabItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  tabTextActive: {
+    color: '#ffffff',
+  },
+  tabUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 20,
+    right: 20,
+    height: 2,
+    backgroundColor: '#ffffff',
   },
 });

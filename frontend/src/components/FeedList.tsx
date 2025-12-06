@@ -40,7 +40,6 @@ export function FeedList({ topic }: Props) {
       if (viewableItems.length > 0) {
         const index = viewableItems[0].index;
         if (index !== null && index !== activeIndex) {
-          console.log(`[FeedList] Viewable item changed: ${activeIndex} -> ${index}`);
           setActiveIndex(index);
         }
       }
@@ -64,7 +63,6 @@ export function FeedList({ topic }: Props) {
   const handleAutoSwipe = useCallback(() => {
     // 次の動画にスクロール
     const nextIndex = activeIndex + 1;
-    console.log(`[FeedList] Auto swipe: ${activeIndex} -> ${nextIndex}`);
     if (nextIndex < items.length) {
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
       // scrollToIndexを呼ぶと、onViewableItemsChangedが呼ばれてactiveIndexが更新される

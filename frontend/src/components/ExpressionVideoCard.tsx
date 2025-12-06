@@ -9,6 +9,7 @@ interface Props {
   expression: Expression;
   isActive: boolean;
   showJapanese: boolean;
+  tabBarHeight?: number;
 }
 
 export interface ExpressionVideoCardRef {
@@ -21,7 +22,7 @@ function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatus
 }
 
 export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
-  ({ expression, isActive, showJapanese }, ref) => {
+  ({ expression, isActive, showJapanese, tabBarHeight = 0 }, ref) => {
     const videoRef = useRef<Video | null>(null);
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
@@ -47,6 +48,11 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
         shouldDuckAndroid: true,
       });
     }, []);
+
+    // expression idが変わった時にリセット
+    useEffect(() => {
+      setIsVideoLoaded(false);
+    }, [expression.id]);
 
     useEffect(() => {
       if (isActive) {
@@ -78,6 +84,9 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       setIsPlaying(!isPlaying);
     };
 
+    // タブバーがある場合は動画をヘッダーの下に配置（実測値を使用）
+    const videoMarginTop = tabBarHeight > 0 ? tabBarHeight - 80 : -80;
+
     return (
       <View style={styles.container}>
         {expression.video_url ? (
@@ -85,7 +94,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
             <Video
               ref={videoRef}
               source={{ uri: expression.video_url }}
-              style={styles.video}
+              style={[styles.video, { marginTop: videoMarginTop }]}
               resizeMode={ResizeMode.CONTAIN}
               shouldPlay={isActive && isPlaying}
               isLooping
@@ -94,7 +103,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
             {!isVideoLoaded && expression.scene_image_url && (
               <Image
                 source={{ uri: expression.scene_image_url }}
-                style={styles.thumbnail}
+                style={[styles.thumbnail, { marginTop: videoMarginTop }]}
                 resizeMode="contain"
               />
             )}
@@ -179,7 +188,7 @@ const styles = StyleSheet.create({
   },
   textOverlay: {
     position: 'absolute',
-    bottom: 280,
+    bottom: 140,
     left: 0,
     right: 0,
     paddingHorizontal: 24,

@@ -14,14 +14,7 @@ export default function RootLayout() {
             <Stack.Screen
               name="index"
               options={{
-                title: 'English-Now',
-                headerStyle: {
-                  backgroundColor: '#1d4ed8',
-                },
-                headerTintColor: '#ffffff',
-                headerTitleStyle: {
-                  fontWeight: 'bold',
-                },
+                headerShown: false,
               }}
             />
             <Stack.Screen name="phrase/[id]" options={{ title: '' }} />
