@@ -31,6 +31,12 @@ export default function RootLayout() {
                 },
               }}
             />
+            <Stack.Screen
+              name="search"
+              options={{
+                headerShown: false,
+              }}
+            />
             <Stack.Screen name="settings" options={{ title: '設定' }} />
             <Stack.Screen
               name="verify-email"

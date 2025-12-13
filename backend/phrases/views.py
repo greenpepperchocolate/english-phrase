@@ -31,11 +31,14 @@ class PhraseFeedView(generics.ListAPIView):
 
         topic = self.request.query_params.get("topic")
         difficulty = self.request.query_params.get("difficulty")
+        search = self.request.query_params.get("search")
         qs = models.Phrase.objects.prefetch_related("phraseexpression_set__expression")
         if topic:
             qs = qs.filter(topic__iexact=topic)
         if difficulty:
             qs = qs.filter(difficulty=difficulty)
+        if search:
+            qs = qs.filter(Q(text__icontains=search) | Q(meaning__icontains=search))
 
         from django.db.models import F
         from django.db.models.functions import Mod, Cast
@@ -459,3 +462,22 @@ class PasswordResetConfirmView(APIView):
                 {"detail": "Invalid password reset link"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+# Email redirect views (for opening app from email links)
+from django.shortcuts import render
+from django.conf import settings
+
+
+def verify_email_redirect(request):
+    """Redirect to app deep link for email verification"""
+    token = request.GET.get('token', '')
+    deep_link = f"{settings.APP_DEEP_LINK_SCHEME}://verify-email?token={token}"
+    return render(request, 'app_redirect.html', {'deep_link': deep_link})
+
+
+def reset_password_redirect(request):
+    """Redirect to app deep link for password reset"""
+    token = request.GET.get('token', '')
+    deep_link = f"{settings.APP_DEEP_LINK_SCHEME}://reset-password?token={token}"
+    return render(request, 'app_redirect.html', {'deep_link': deep_link})

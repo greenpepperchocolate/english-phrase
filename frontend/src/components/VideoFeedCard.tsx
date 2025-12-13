@@ -234,6 +234,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       router.push('/settings');
     };
 
+    const handleSearchPress = () => {
+      router.push('/search');
+    };
+
     const handleTabPress = (targetIndex: number) => {
       if (targetIndex !== horizontalIndex) {
         horizontalFlatListRef.current?.scrollToIndex({ index: targetIndex, animated: true });
@@ -307,6 +311,12 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                   <Text style={styles.iconButtonText}>★</Text>
                 </Pressable>
                 <Pressable
+                  onPress={handleSearchPress}
+                  style={styles.iconButton}
+                >
+                  <Text style={styles.iconButtonText}>🔍</Text>
+                </Pressable>
+                <Pressable
                   onPress={handleSettingsPress}
                   style={styles.iconButton}
                 >
@@ -349,7 +359,9 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
             style={[styles.tabBar, { paddingTop: insets.top }]}
             onLayout={(event) => {
               const { height } = event.nativeEvent.layout;
-              setTabBarHeight(height);
+              if (height !== tabBarHeight) {
+                setTabBarHeight(height);
+              }
             }}
           >
             <Pressable style={styles.tabItem} onPress={() => handleTabPress(0)}>
@@ -597,6 +609,6 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     height: 2,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#3b82f6',
   },
 });

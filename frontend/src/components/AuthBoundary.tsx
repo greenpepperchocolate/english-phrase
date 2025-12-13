@@ -1,5 +1,5 @@
 import { PropsWithChildren, useState } from 'react';
-import { Alert, ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useAuth } from '../providers/AuthProvider';
 import { API_BASE_URL } from '../utils/config';
@@ -37,28 +37,40 @@ function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.logo}>🎓</Text>
-          <Text style={styles.appName}>English Phrase</Text>
-          <Text style={styles.tagline}>Master English, one phrase at a time</Text>
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Image
+              source={require('../../assets/イメタンロゴ.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.tagline}>映像で覚える英単語アプリ</Text>
+          </View>
 
-        {isSignUp ? (
-          <SignUpForm onSuccess={() => setIsSignUp(false)} />
-        ) : (
-          <SignInForm onForgotPassword={() => setShowForgotPassword(true)} />
-        )}
+          {isSignUp ? (
+            <SignUpForm onSuccess={() => setIsSignUp(false)} />
+          ) : (
+            <SignInForm onForgotPassword={() => setShowForgotPassword(true)} />
+          )}
 
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchText}>
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-          </Text>
-          <Pressable onPress={() => setIsSignUp(!isSignUp)}>
-            <Text style={styles.switchLink}>{isSignUp ? 'Sign In' : 'Sign Up'}</Text>
-          </Pressable>
-        </View>
-      </View>
+          <View style={styles.switchContainer}>
+            <Text style={styles.switchText}>
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+            </Text>
+            <Pressable onPress={() => setIsSignUp(!isSignUp)}>
+              <Text style={styles.switchLink}>{isSignUp ? 'Sign In' : 'Sign Up'}</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -254,31 +266,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {
+  keyboardView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingVertical: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 24,
   },
   logo: {
-    fontSize: 64,
-    marginBottom: 16,
+    width: 100,
+    height: 100,
+    marginBottom: 12,
   },
   appName: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   tagline: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#888888',
   },
   formContainer: {
-    gap: 16,
+    gap: 14,
+    marginBottom: 8,
   },
   input: {
     backgroundColor: '#1a1a1a',
@@ -336,7 +354,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 24,
+    marginBottom: 20,
     gap: 8,
   },
   switchText: {
@@ -421,42 +440,51 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.forgotIcon}>🔒</Text>
-        <Text style={styles.appName}>Forgot Password?</Text>
-        <Text style={styles.forgotMessage}>
-          Enter your email address and we'll send you a link to reset your password.
-        </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.forgotIcon}>🔒</Text>
+          <Text style={styles.appName}>Forgot Password?</Text>
+          <Text style={styles.forgotMessage}>
+            Enter your email address and we'll send you a link to reset your password.
+          </Text>
 
-        <View style={styles.formContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#888"
-            value={email}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            editable={!busy}
-          />
+          <View style={styles.formContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#888"
+              value={email}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              onChangeText={setEmail}
+              editable={!busy}
+            />
 
-          <Pressable
-            style={[styles.button, styles.primaryButton, busy && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={busy}
-          >
-            {busy ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.buttonText}>Send Reset Link</Text>
-            )}
-          </Pressable>
+            <Pressable
+              style={[styles.button, styles.primaryButton, busy && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={busy}
+            >
+              {busy ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.buttonText}>Send Reset Link</Text>
+              )}
+            </Pressable>
 
-          <Pressable style={styles.backToLoginButton} onPress={onBack} disabled={busy}>
-            <Text style={styles.switchLink}>Back to Login</Text>
-          </Pressable>
-        </View>
-      </View>
+            <Pressable style={styles.backToLoginButton} onPress={onBack} disabled={busy}>
+              <Text style={styles.switchLink}>Back to Login</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

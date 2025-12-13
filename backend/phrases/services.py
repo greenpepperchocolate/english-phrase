@@ -70,41 +70,47 @@ def send_verification_email(user, token: str) -> None:
     from django.core.mail import send_mail
     from django.conf import settings
 
-    verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    # Use HTTP redirect page that opens the app (works in email clients)
+    if settings.APP_DEEP_LINK_SCHEME:
+        # Use redirect page that will open the app
+        verification_url = f"{settings.SITE_URL}/verify-email-redirect/?token={token}"
+    else:
+        # Fallback to web URL format
+        base_url = settings.FRONTEND_URL.rstrip('/')
+        verification_url = f"{base_url}/verify-email?token={token}"
 
-    subject = "English Phrase - Verify your email address"
+    subject = "映単語 - メールアドレスの確認"
     message = f"""
-Welcome to English Phrase!
+映単語へようこそ！
 
-Please verify your email address by clicking the link below:
+以下のリンクをクリックしてメールアドレスを確認してください：
 
 {verification_url}
 
-This link will expire in 24 hours.
+このリンクは24時間で期限切れになります。
 
-If you didn't create an account, please ignore this email.
+このメールに心当たりがない場合は、無視してください。
 
-Best regards,
-English Phrase Team
+映単語チーム
 """
 
     html_message = f"""
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #1d4ed8;">Welcome to English Phrase!</h2>
-        <p>Please verify your email address by clicking the button below:</p>
+        <h2 style="color: #1d4ed8;">映単語へようこそ！</h2>
+        <p>以下のボタンをクリックしてメールアドレスを確認してください：</p>
         <div style="margin: 30px 0;">
             <a href="{verification_url}"
                style="background-color: #1d4ed8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Verify Email Address
+                メールアドレスを確認する
             </a>
         </div>
-        <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+        <p style="color: #666; font-size: 14px;">または、このリンクをブラウザにコピー＆ペーストしてください：</p>
         <p style="color: #1d4ed8; font-size: 14px; word-break: break-all;">{verification_url}</p>
         <p style="color: #999; font-size: 12px; margin-top: 30px;">
-            This link will expire in 24 hours.<br>
-            If you didn't create an account, please ignore this email.
+            このリンクは24時間で期限切れになります。<br>
+            このメールに心当たりがない場合は、無視してください。
         </p>
     </div>
 </body>
@@ -132,44 +138,50 @@ def send_password_reset_email(user, token: str) -> None:
     from django.core.mail import send_mail
     from django.conf import settings
 
-    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+    # Use HTTP redirect page that opens the app (works in email clients)
+    if settings.APP_DEEP_LINK_SCHEME:
+        # Use redirect page that will open the app
+        reset_url = f"{settings.SITE_URL}/reset-password-redirect/?token={token}"
+    else:
+        # Fallback to web URL format
+        base_url = settings.FRONTEND_URL.rstrip('/')
+        reset_url = f"{base_url}/reset-password?token={token}"
 
-    subject = "English Phrase - Reset your password"
+    subject = "映単語 - パスワードのリセット"
     message = f"""
-Hello,
+こんにちは、
 
-You requested to reset your password for English Phrase.
+映単語のパスワードリセットをリクエストされました。
 
-Please click the link below to reset your password:
+以下のリンクをクリックしてパスワードをリセットしてください：
 
 {reset_url}
 
-This link will expire in 1 hour.
+このリンクは1時間で期限切れになります。
 
-If you didn't request a password reset, please ignore this email.
+パスワードリセットをリクエストしていない場合は、このメールを無視してください。
 
-Best regards,
-English Phrase Team
+映単語チーム
 """
 
     html_message = f"""
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #1d4ed8;">Reset Your Password</h2>
-        <p>You requested to reset your password for English Phrase.</p>
-        <p>Click the button below to reset your password:</p>
+        <h2 style="color: #1d4ed8;">パスワードのリセット</h2>
+        <p>映単語のパスワードリセットをリクエストされました。</p>
+        <p>以下のボタンをクリックしてパスワードをリセットしてください：</p>
         <div style="margin: 30px 0;">
             <a href="{reset_url}"
                style="background-color: #1d4ed8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Reset Password
+                パスワードをリセットする
             </a>
         </div>
-        <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+        <p style="color: #666; font-size: 14px;">または、このリンクをブラウザにコピー＆ペーストしてください：</p>
         <p style="color: #1d4ed8; font-size: 14px; word-break: break-all;">{reset_url}</p>
         <p style="color: #999; font-size: 12px; margin-top: 30px;">
-            This link will expire in 1 hour.<br>
-            If you didn't request a password reset, please ignore this email.
+            このリンクは1時間で期限切れになります。<br>
+            パスワードリセットをリクエストしていない場合は、このメールを無視してください。
         </p>
     </div>
 </body>

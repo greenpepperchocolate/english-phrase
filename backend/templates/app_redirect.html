@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>映単語</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1d4ed8 0%, #0d1b2a 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            text-align: center;
+            max-width: 400px;
+        }
+        .logo {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #cccccc;
+            margin-bottom: 24px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #1d4ed8;
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 8px;
+            border: 2px solid #1d4ed8;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background-color: #1e40af;
+            border-color: #1e40af;
+        }
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .info {
+            font-size: 14px;
+            color: #888888;
+            margin-top: 32px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📱</div>
+        <h1>映単語アプリを起動中...</h1>
+        <div class="spinner"></div>
+        <p>アプリが自動的に起動します。<br>起動しない場合は、下のボタンをタップしてください。</p>
+        <a href="{{ deep_link }}" class="button" id="openApp">アプリを開く</a>
+        <div class="info">
+            アプリがインストールされていない場合は、<br>
+            App StoreまたはGoogle Playからダウンロードしてください。
+        </div>
+    </div>
+
+    <script>
+        // ページが読み込まれたら自動的にアプリを開く
+        window.onload = function() {
+            const deepLink = "{{ deep_link }}";
+
+            // 即座にDeep Linkでアプリを開く試み
+            window.location.href = deepLink;
+
+            // 2秒後にもう一度試みる（最初の試みが失敗した場合のため）
+            setTimeout(function() {
+                window.location.href = deepLink;
+            }, 2000);
+        };
+
+        // ボタンがクリックされた場合
+        document.getElementById('openApp').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = "{{ deep_link }}";
+        });
+    </script>
+</body>
+</html>

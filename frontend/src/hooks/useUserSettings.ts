@@ -22,6 +22,10 @@ export function useUserSettings() {
       }
     },
     retry: 1,
+    staleTime: 5 * 60 * 1000, // 5分間はキャッシュを使用（再取得しない）
+    cacheTime: 10 * 60 * 1000, // 10分間キャッシュを保持
+    refetchOnWindowFocus: false, // ウィンドウフォーカス時に再取得しない
+    refetchOnMount: false, // マウント時に再取得しない（キャッシュがあれば使用）
   });
 
   const updateSettings = useMutation({

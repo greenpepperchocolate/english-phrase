@@ -166,11 +166,28 @@ R2_SIGNED_URL_TTL = int(os.environ.get("R2_SIGNED_URL_TTL", "600"))  # デフォ
 R2_CACHE_CONTROL_PUBLIC = "public, max-age=31536000, immutable"  # 1年キャッシュ
 
 # Email Configuration
-EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@englishphrase.com")
+# SendGrid API Key (preferred method)
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+
+# Fallback to SMTP if SendGrid API key is not set
+if SENDGRID_API_KEY:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = "smtp.sendgrid.net"
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = "apikey"
+    EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
+else:
+    # Gmail SMTP fallback for development
+    EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@eitango.club")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8081")
+# Deep link scheme for mobile apps (used in email verification links)
+APP_DEEP_LINK_SCHEME = os.environ.get("APP_DEEP_LINK_SCHEME", "")
+
