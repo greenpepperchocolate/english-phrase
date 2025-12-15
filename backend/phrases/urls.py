@@ -17,6 +17,7 @@ urlpatterns = [
     path("auth/login", views.AuthLoginView.as_view(), name="auth-login"),
     path("auth/refresh", views.AuthRefreshView.as_view(), name="auth-refresh"),
     path("auth/anonymous", views.AuthAnonymousView.as_view(), name="auth-anonymous"),
+    path("auth/delete-account", views.DeleteAccountView.as_view(), name="auth-delete-account"),
     path("auth/password-reset/request", views.PasswordResetRequestView.as_view(), name="auth-password-reset-request"),
     path("auth/password-reset/confirm", views.PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm"),
 ]

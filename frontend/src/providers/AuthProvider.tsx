@@ -32,6 +32,7 @@ type AuthContextValue = {
   signIn: (payload: LoginPayload) => Promise<void>;
   signInAnonymously: (deviceId?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   authorizedFetch: <T>(path: string, init?: RequestInit) => Promise<T>;
 };
 
@@ -200,6 +201,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await persistTokens(null);
   }, [persistTokens]);
 
+  const deleteAccount = useCallback(async () => {
+    if (!tokens) {
+      throw new Error('Not authenticated');
+    }
+
+    // アカウント削除APIを呼び出し
+    await fetchJson('/auth/delete-account', {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${tokens.accessToken}`,
+      },
+    });
+
+    // 削除成功後、ローカルのトークンをクリア
+    await persistTokens(null);
+  }, [persistTokens, tokens]);
+
   const authorizedFetch = useCallback(
     async <T,>(path: string, init?: RequestInit): Promise<T> => {
       let activeTokens = tokens;
@@ -238,8 +256,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ tokens, isBootstrapping, signUp, signIn, signInAnonymously, signOut, authorizedFetch }),
-    [authorizedFetch, isBootstrapping, signUp, signIn, signInAnonymously, signOut, tokens]
+    () => ({ tokens, isBootstrapping, signUp, signIn, signInAnonymously, signOut, deleteAccount, authorizedFetch }),
+    [authorizedFetch, isBootstrapping, signUp, signIn, signInAnonymously, signOut, deleteAccount, tokens]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

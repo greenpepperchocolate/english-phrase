@@ -188,11 +188,11 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const handleFavoritePress = () => {
       if (isGuest) {
         Alert.alert(
-          'Account Required',
-          'Keep feature is only available for registered users. Please create an account to save videos for later review.',
+          'アカウントが必要です',
+          'Keep機能は登録ユーザーのみ利用できます。動画を保存して後で復習するにはログインしてください。',
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign Up', onPress: () => signOut() },
+            { text: 'キャンセル', style: 'cancel' },
+            { text: '新規登録', onPress: () => signOut() },
           ]
         );
         return;
@@ -203,11 +203,11 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const handleMasteredPress = () => {
       if (isGuest) {
         Alert.alert(
-          'Account Required',
-          'Mastered feature is only available for registered users. Please create an account to track your progress.',
+          'アカウントが必要です',
+          'Master機能は登録ユーザーのみ利用できます。進捗を記録するにはログインしてください',
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign Up', onPress: () => signOut() },
+            { text: 'キャンセル', style: 'cancel' },
+            { text: '新規登録', onPress: () => signOut() },
           ]
         );
         return;
@@ -218,11 +218,11 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const handleFavoritesListPress = () => {
       if (isGuest) {
         Alert.alert(
-          'Account Required',
-          'Keep feature is only available for registered users. Please create an account to save videos for later review.',
+          'アカウントが必要です',
+          'Keep機能は登録ユーザーのみ利用できます。動画を保存して後で復習するにはログインしてください',
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign Up', onPress: () => signOut() },
+            { text: 'キャンセル', style: 'cancel' },
+            { text: '新規登録', onPress: () => signOut() },
           ]
         );
         return;
@@ -283,7 +283,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
               </>
             ) : (
               <View style={styles.placeholder}>
-                <Text style={styles.placeholderText}>No video available</Text>
+                <Text style={styles.placeholderText}>動画がありません</Text>
               </View>
             )}
 
@@ -294,7 +294,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                   style={[styles.masteredButton, isMastered && styles.masteredButtonActive]}
                 >
                   <Text style={[styles.masteredButtonText, isMastered && styles.masteredButtonTextActive]}>
-                    {isMastered ? '✓ Mastered' : 'Mastered'}
+                    {isMastered ? '✓ mastered' : 'Master'}
                   </Text>
                 </Pressable>
                 <Pressable

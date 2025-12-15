@@ -13,7 +13,7 @@ export default function ResetPasswordScreen() {
 
   useEffect(() => {
     if (!token) {
-      Alert.alert('Error', 'Invalid password reset link.', [
+      Alert.alert('エラー', '無効なパスワードリセットリンクです。', [
         { text: 'OK', onPress: () => router.replace('/') },
       ]);
     }
@@ -21,17 +21,17 @@ export default function ResetPasswordScreen() {
 
   const handleSubmit = async () => {
     if (!newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert('エラー', '全ての項目を入力してください。');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
+      Alert.alert('エラー', 'パスワードが一致しません。');
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long.');
+      Alert.alert('エラー', 'パスワードは6文字以上で入力してください。');
       return;
     }
 
@@ -49,8 +49,8 @@ export default function ResetPasswordScreen() {
 
       if (response.ok) {
         Alert.alert(
-          'Password Reset Successful',
-          'Your password has been reset successfully. You can now log in with your new password.',
+          'パスワードリセット完了',
+          'パスワードのリセットが完了しました。新しいパスワードでログインできます。',
           [
             {
               text: 'OK',
@@ -59,11 +59,11 @@ export default function ResetPasswordScreen() {
           ]
         );
       } else {
-        Alert.alert('Error', data.detail || 'Failed to reset password. Please try again or request a new reset link.');
+        Alert.alert('エラー', data.detail || 'パスワードのリセットに失敗しました。もう一度お試しいただくか、新しいリセットリンクをリクエストしてください。');
       }
     } catch (error) {
       console.error('Password reset error:', error);
-      Alert.alert('Error', 'Network error. Please check your connection and try again.');
+      Alert.alert('エラー', 'ネットワークエラーが発生しました。接続をご確認の上、もう一度お試しください。');
     } finally {
       setBusy(false);
     }
@@ -77,12 +77,12 @@ export default function ResetPasswordScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.icon}>🔑</Text>
-        <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.message}>Enter your new password below.</Text>
+        <Text style={styles.title}>パスワードリセット</Text>
+        <Text style={styles.message}>新しいパスワードを入力してください。</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="New Password (min 6 characters)"
+          placeholder="新しいパスワード（6文字以上）"
           placeholderTextColor="#888"
           value={newPassword}
           secureTextEntry
@@ -92,7 +92,7 @@ export default function ResetPasswordScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Confirm New Password"
+          placeholder="新しいパスワード（確認）"
           placeholderTextColor="#888"
           value={confirmPassword}
           secureTextEntry
@@ -108,7 +108,7 @@ export default function ResetPasswordScreen() {
           {busy ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.buttonText}>Reset Password</Text>
+            <Text style={styles.buttonText}>パスワードをリセット</Text>
           )}
         </Pressable>
       </View>

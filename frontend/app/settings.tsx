@@ -5,9 +5,10 @@ import { useAuth } from '../src/providers/AuthProvider';
 
 export default function SettingsScreen() {
   const { settingsQuery, updateSettings } = useUserSettings();
-  const { signOut, tokens } = useAuth();
+  const { signOut, deleteAccount, tokens } = useAuth();
   const [showJapanese, setShowJapanese] = useState(true);
   const [repeatCount, setRepeatCount] = useState(1);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -23,17 +24,49 @@ export default function SettingsScreen() {
         show_japanese: showJapanese,
         repeat_count: repeatCount,
       });
-      Alert.alert('Settings saved');
+      Alert.alert('保存完了', '設定を保存しました。');
     } catch (error) {
-      Alert.alert('Failed to save settings');
+      Alert.alert('エラー', '設定の保存に失敗しました。');
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'アカウント削除の確認',
+      '本当にアカウントを削除しますか？この操作は取り消せません。すべてのデータ（お気に入り、学習履歴、設定）が完全に削除されます。',
+      [
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+        {
+          text: '削除する',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await deleteAccount();
+              Alert.alert('削除完了', 'アカウントが削除されました。');
+            } catch (error: any) {
+              console.error('Delete account error:', error);
+              Alert.alert(
+                'エラー',
+                error?.data?.detail || 'アカウントの削除に失敗しました。もう一度お試しください。'
+              );
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (settingsQuery.isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.label}>Loading settings...</Text>
+          <Text style={styles.label}>設定を読み込み中...</Text>
         </View>
       </SafeAreaView>
     );
@@ -44,9 +77,9 @@ export default function SettingsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.label}>Error loading settings</Text>
-          <Text style={styles.errorText}>{settingsQuery.error?.message || 'Unknown error'}</Text>
-          <Button title="Retry" onPress={() => settingsQuery.refetch()} />
+          <Text style={styles.label}>設定の読み込みエラー</Text>
+          <Text style={styles.errorText}>{settingsQuery.error?.message || '不明なエラー'}</Text>
+          <Button title="再試行" onPress={() => settingsQuery.refetch()} />
         </View>
       </SafeAreaView>
     );
@@ -59,22 +92,22 @@ export default function SettingsScreen() {
       {isGuest && (
         <View style={styles.guestNotice}>
           <Text style={styles.guestNoticeIcon}>🔒</Text>
-          <Text style={styles.guestNoticeTitle}>Guest Account</Text>
+          <Text style={styles.guestNoticeTitle}>ゲストアカウント</Text>
           <Text style={styles.guestNoticeText}>
-            Settings are not saved for guest accounts. Create an account to save your preferences!
+            ゲストアカウントでは設定が保存されません。アカウントを作成して設定を保存しましょう！
           </Text>
           <Pressable style={styles.signUpPromptButton} onPress={signOut}>
-            <Text style={styles.signUpPromptButtonText}>Sign Up / Sign In</Text>
+            <Text style={styles.signUpPromptButtonText}>新規登録 / ログイン</Text>
           </Pressable>
         </View>
       )}
 
       <View style={[styles.card, isGuest && styles.cardDisabled]}>
         <View style={styles.switchRow}>
-          <Text style={[styles.label, isGuest && styles.labelDisabled]}>Show Japanese text</Text>
+          <Text style={[styles.label, isGuest && styles.labelDisabled]}>日本語字幕を表示</Text>
           <Switch value={showJapanese} onValueChange={setShowJapanese} disabled={isGuest} />
         </View>
-        <Text style={[styles.label, isGuest && styles.labelDisabled]}>Repeat count (times per video)</Text>
+        <Text style={[styles.label, isGuest && styles.labelDisabled]}>リピート回数（動画1本あたり）</Text>
         <View style={styles.repeatCountContainer}>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
             <Pressable
@@ -90,13 +123,24 @@ export default function SettingsScreen() {
           ))}
         </View>
         <Text style={[styles.hint, isGuest && styles.hintDisabled]}>
-          {repeatCount === 1 ? '1 time = auto-swipe after 1 play' : `${repeatCount} times = auto-swipe after ${repeatCount} plays`}
+          {repeatCount === 1 ? '1回 = 1回再生後に次の動画へ' : `${repeatCount}回 = ${repeatCount}回再生後に次の動画へ`}
         </Text>
-        {!isGuest && <Button title="Save" onPress={handleSave} disabled={updateSettings.isPending} />}
+        {!isGuest && <Button title="保存" onPress={handleSave} disabled={updateSettings.isPending} />}
       </View>
       <View style={styles.footer}>
-        <Text style={styles.info}>{isGuest ? 'Guest account' : 'Signed in'}</Text>
-        <Button title="Sign out" onPress={signOut} />
+        <Text style={styles.info}>{isGuest ? 'ゲストアカウント' : 'ログイン中'}</Text>
+        <Button title="ログアウト" onPress={signOut} />
+        {!isGuest && (
+          <Pressable
+            style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
+            onPress={handleDeleteAccount}
+            disabled={isDeleting}
+          >
+            <Text style={styles.deleteButtonText}>
+              {isDeleting ? 'アカウント削除中...' : 'アカウントを削除'}
+            </Text>
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -231,5 +275,22 @@ const styles = StyleSheet.create({
   },
   hintDisabled: {
     color: '#cbd5e1',
+  },
+  deleteButton: {
+    backgroundColor: '#ef4444',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  deleteButtonDisabled: {
+    backgroundColor: '#fca5a5',
+    opacity: 0.6,
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

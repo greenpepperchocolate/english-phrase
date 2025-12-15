@@ -13,7 +13,7 @@ export default function VerifyEmailScreen() {
   useEffect(() => {
     if (!token) {
       setStatus('error');
-      setMessage('Invalid verification link. No token provided.');
+      setMessage('無効な認証リンクです。トークンが提供されていません。');
       return;
     }
 
@@ -31,15 +31,15 @@ export default function VerifyEmailScreen() {
 
         if (response.ok) {
           setStatus('success');
-          setMessage(data.message || 'Email verified successfully!');
+          setMessage(data.message || 'メールアドレスの認証が完了しました！');
         } else {
           setStatus('error');
-          setMessage(data.detail || 'Verification failed. Please try again.');
+          setMessage(data.detail || '認証に失敗しました。もう一度お試しください。');
         }
       } catch (error) {
         console.error('Verification error:', error);
         setStatus('error');
-        setMessage('Network error. Please check your connection and try again.');
+        setMessage('ネットワークエラーが発生しました。接続をご確認の上、もう一度お試しください。');
       }
     };
 
@@ -56,19 +56,19 @@ export default function VerifyEmailScreen() {
         {status === 'verifying' && (
           <>
             <ActivityIndicator size="large" color="#1d4ed8" />
-            <Text style={styles.title}>Verifying Your Email...</Text>
-            <Text style={styles.message}>Please wait while we verify your email address.</Text>
+            <Text style={styles.title}>メールアドレスを認証中...</Text>
+            <Text style={styles.message}>メールアドレスの認証を行っています。しばらくお待ちください。</Text>
           </>
         )}
 
         {status === 'success' && (
           <>
             <Text style={styles.icon}>✅</Text>
-            <Text style={styles.title}>Email Verified!</Text>
+            <Text style={styles.title}>メール認証完了！</Text>
             <Text style={styles.message}>{message}</Text>
-            <Text style={styles.subMessage}>You can now sign in to your account.</Text>
+            <Text style={styles.subMessage}>アカウントにログインできるようになりました。</Text>
             <Pressable style={styles.button} onPress={handleContinue}>
-              <Text style={styles.buttonText}>Continue to Login</Text>
+              <Text style={styles.buttonText}>ログインへ進む</Text>
             </Pressable>
           </>
         )}
@@ -76,10 +76,10 @@ export default function VerifyEmailScreen() {
         {status === 'error' && (
           <>
             <Text style={styles.icon}>❌</Text>
-            <Text style={styles.title}>Verification Failed</Text>
+            <Text style={styles.title}>認証失敗</Text>
             <Text style={styles.message}>{message}</Text>
             <Pressable style={styles.button} onPress={handleContinue}>
-              <Text style={styles.buttonText}>Back to Login</Text>
+              <Text style={styles.buttonText}>ログインに戻る</Text>
             </Pressable>
           </>
         )}

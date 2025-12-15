@@ -10,7 +10,7 @@ export default function ForgotPasswordScreen() {
 
   const handleSubmit = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address.');
+      Alert.alert('エラー', 'メールアドレスを入力してください。');
       return;
     }
 
@@ -28,8 +28,8 @@ export default function ForgotPasswordScreen() {
 
       if (response.ok) {
         Alert.alert(
-          'Check Your Email',
-          'If an account with that email exists, a password reset link has been sent. Please check your email.',
+          'メールをご確認ください',
+          'そのメールアドレスのアカウントが存在する場合、パスワードリセットリンクが送信されました。メールをご確認ください。',
           [
             {
               text: 'OK',
@@ -38,11 +38,11 @@ export default function ForgotPasswordScreen() {
           ]
         );
       } else {
-        Alert.alert('Error', data.detail || 'Failed to send reset email. Please try again.');
+        Alert.alert('エラー', data.detail || 'リセットメールの送信に失敗しました。もう一度お試しください。');
       }
     } catch (error) {
       console.error('Password reset request error:', error);
-      Alert.alert('Error', 'Network error. Please check your connection and try again.');
+      Alert.alert('エラー', 'ネットワークエラーが発生しました。接続をご確認の上、もう一度お試しください。');
     } finally {
       setBusy(false);
     }
@@ -52,14 +52,14 @@ export default function ForgotPasswordScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.icon}>🔒</Text>
-        <Text style={styles.title}>Forgot Password?</Text>
+        <Text style={styles.title}>パスワードをお忘れですか？</Text>
         <Text style={styles.message}>
-          Enter your email address and we'll send you a link to reset your password.
+          メールアドレスを入力してください。パスワードリセット用のリンクをお送りします。
         </Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="メールアドレス"
           placeholderTextColor="#888"
           value={email}
           autoCapitalize="none"
@@ -76,12 +76,12 @@ export default function ForgotPasswordScreen() {
           {busy ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.buttonText}>Send Reset Link</Text>
+            <Text style={styles.buttonText}>リセットリンクを送信</Text>
           )}
         </Pressable>
 
         <Pressable style={styles.backButton} onPress={() => router.replace('/')} disabled={busy}>
-          <Text style={styles.backButtonText}>Back to Login</Text>
+          <Text style={styles.backButtonText}>ログインに戻る</Text>
         </Pressable>
       </View>
     </SafeAreaView>

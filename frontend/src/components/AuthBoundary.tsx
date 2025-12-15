@@ -63,10 +63,10 @@ function AuthScreen() {
 
           <View style={styles.switchContainer}>
             <Text style={styles.switchText}>
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              {isSignUp ? 'すでにアカウントをお持ちですか？' : 'アカウントを作成する'}
             </Text>
             <Pressable onPress={() => setIsSignUp(!isSignUp)}>
-              <Text style={styles.switchLink}>{isSignUp ? 'Sign In' : 'Sign Up'}</Text>
+              <Text style={styles.switchLink}>{isSignUp ? 'ログイン' : '新規登録'}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -83,7 +83,7 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter your email and password.');
+      Alert.alert('エラー', 'メールアドレスとパスワードを入力してください。');
       return;
     }
     setBusy(true);
@@ -93,11 +93,11 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
       console.error(error);
       if (error?.status === 403) {
         Alert.alert(
-          'Email Not Verified',
-          error?.data?.detail || 'Please verify your email address before logging in. Check your inbox for the verification email.'
+          'メール未認証',
+          error?.data?.detail || 'ログインする前にメールアドレスを認証してください。受信トレイで認証メールをご確認ください。'
         );
       } else {
-        Alert.alert('Login Failed', error?.data?.detail || 'Please check your email and password.');
+        Alert.alert('ログイン失敗', error?.data?.detail || 'メールアドレスとパスワードをご確認ください。');
       }
     } finally {
       setBusy(false);
@@ -109,7 +109,7 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
     try {
       await signInAnonymously();
     } catch (error) {
-      Alert.alert('Error', 'Guest login failed. Please try again.');
+      Alert.alert('エラー', 'ゲストログインに失敗しました。もう一度お試しください。');
     } finally {
       setBusy(false);
     }
@@ -119,7 +119,7 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
     <View style={styles.formContainer}>
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder="メールアドレス"
         placeholderTextColor="#888"
         value={email}
         autoCapitalize="none"
@@ -129,7 +129,7 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
       />
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="パスワード"
         placeholderTextColor="#888"
         value={password}
         secureTextEntry
@@ -138,7 +138,7 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
       />
 
       <Pressable style={styles.forgotPasswordButton} onPress={onForgotPassword} disabled={busy}>
-        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+        <Text style={styles.forgotPasswordText}>パスワードをお忘れですか？</Text>
       </Pressable>
 
       <Pressable
@@ -146,12 +146,12 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         onPress={handleSignIn}
         disabled={busy}
       >
-        <Text style={styles.buttonText}>{busy ? 'Signing in...' : 'Sign In'}</Text>
+        <Text style={styles.buttonText}>{busy ? 'ログイン中...' : 'ログイン'}</Text>
       </Pressable>
 
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>OR</Text>
+        <Text style={styles.dividerText}>または</Text>
         <View style={styles.dividerLine} />
       </View>
 
@@ -160,7 +160,7 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         onPress={handleGuestLogin}
         disabled={busy}
       >
-        <Text style={styles.secondaryButtonText}>Continue as Guest</Text>
+        <Text style={styles.secondaryButtonText}>ゲストとして続ける</Text>
       </Pressable>
     </View>
   );
@@ -175,23 +175,23 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
 
   const handleSignUp = async () => {
     if (!email || !password || !passwordConfirm) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert('エラー', '全ての項目を入力してください。');
       return;
     }
     if (password !== passwordConfirm) {
-      Alert.alert('Error', 'Passwords do not match.');
+      Alert.alert('エラー', 'パスワードが一致しません。');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long.');
+      Alert.alert('エラー', 'パスワードは6文字以上で入力してください。');
       return;
     }
     setBusy(true);
     try {
       const response = await signUp({ email, password, password_confirm: passwordConfirm });
       Alert.alert(
-        'Check Your Email',
-        `We've sent a verification link to ${response.email}. Please check your email and click the link to verify your account before logging in.`,
+        'メールをご確認ください',
+        `${response.email}に認証リンクを送信しました。ログインする前にメールを確認してリンクをクリックしてアカウントを認証してください。`,
         [
           {
             text: 'OK',
@@ -206,8 +206,8 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
       );
     } catch (error: any) {
       console.error(error);
-      const errorMsg = error?.data?.email?.[0] || error?.data?.password?.[0] || error?.data?.detail || 'Sign up failed. Please try again.';
-      Alert.alert('Sign Up Failed', errorMsg);
+      const errorMsg = error?.data?.email?.[0] || error?.data?.password?.[0] || error?.data?.detail || '新規登録に失敗しました。もう一度お試しください。';
+      Alert.alert('新規登録失敗', errorMsg);
     } finally {
       setBusy(false);
     }
@@ -217,7 +217,7 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
     <View style={styles.formContainer}>
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder="メールアドレス"
         placeholderTextColor="#888"
         value={email}
         autoCapitalize="none"
@@ -227,7 +227,7 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
       />
       <TextInput
         style={styles.input}
-        placeholder="Password (min 6 characters)"
+        placeholder="パスワード（6文字以上）"
         placeholderTextColor="#888"
         value={password}
         secureTextEntry
@@ -236,7 +236,7 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
       />
       <TextInput
         style={styles.input}
-        placeholder="Confirm Password"
+        placeholder="パスワード（確認）"
         placeholderTextColor="#888"
         value={passwordConfirm}
         secureTextEntry
@@ -249,7 +249,7 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
         onPress={handleSignUp}
         disabled={busy}
       >
-        <Text style={styles.buttonText}>{busy ? 'Creating account...' : 'Sign Up'}</Text>
+        <Text style={styles.buttonText}>{busy ? 'アカウント作成中...' : '新規登録'}</Text>
       </Pressable>
     </View>
   );
@@ -400,7 +400,7 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
 
   const handleSubmit = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address.');
+      Alert.alert('エラー', 'メールアドレスを入力してください。');
       return;
     }
 
@@ -418,8 +418,8 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
 
       if (response.ok) {
         Alert.alert(
-          'Check Your Email',
-          'If an account with that email exists, a password reset link has been sent. Please check your email.',
+          'メールをご確認ください',
+          'そのメールアドレスのアカウントが存在する場合、パスワードリセットリンクが送信されました。メールをご確認ください。',
           [
             {
               text: 'OK',
@@ -428,11 +428,11 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
           ]
         );
       } else {
-        Alert.alert('Error', data.detail || 'Failed to send reset email. Please try again.');
+        Alert.alert('エラー', data.detail || 'リセットメールの送信に失敗しました。もう一度お試しください。');
       }
     } catch (error) {
       console.error('Password reset request error:', error);
-      Alert.alert('Error', 'Network error. Please check your connection and try again.');
+      Alert.alert('エラー', 'ネットワークエラーが発生しました。接続をご確認の上、もう一度お試しください。');
     } finally {
       setBusy(false);
     }
@@ -450,15 +450,15 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.forgotIcon}>🔒</Text>
-          <Text style={styles.appName}>Forgot Password?</Text>
+          <Text style={styles.appName}>パスワードをお忘れですか？</Text>
           <Text style={styles.forgotMessage}>
-            Enter your email address and we'll send you a link to reset your password.
+            メールアドレスを入力してください。パスワードリセット用のリンクをお送りします。
           </Text>
 
           <View style={styles.formContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder="メールアドレス"
               placeholderTextColor="#888"
               value={email}
               autoCapitalize="none"
@@ -475,12 +475,12 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
               {busy ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text style={styles.buttonText}>Send Reset Link</Text>
+                <Text style={styles.buttonText}>リセットリンクを送信</Text>
               )}
             </Pressable>
 
             <Pressable style={styles.backToLoginButton} onPress={onBack} disabled={busy}>
-              <Text style={styles.switchLink}>Back to Login</Text>
+              <Text style={styles.switchLink}>ログインに戻る</Text>
             </Pressable>
           </View>
         </ScrollView>

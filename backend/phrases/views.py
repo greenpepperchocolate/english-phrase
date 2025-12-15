@@ -301,6 +301,29 @@ class AuthAnonymousView(APIView):
         )
 
 
+class DeleteAccountView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+
+        # 匿名ユーザーは削除できない
+        if user.email.startswith('anon_') and user.email.endswith('@example.com'):
+            return Response(
+                {"detail": "匿名アカウントは削除できません。"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # ユーザーアカウントを削除（関連データは CASCADE で自動削除される）
+        user_email = user.email
+        user.delete()
+
+        return Response(
+            {"detail": f"アカウント {user_email} が正常に削除されました。"},
+            status=status.HTTP_200_OK
+        )
+
+
 class MediaSignedUrlView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
