@@ -11,10 +11,14 @@ export function useUserSettings() {
   const settingsQuery = useQuery<UserSettings, Error>({
     queryKey: SETTINGS_KEY,
     queryFn: async () => {
-      console.log('Fetching settings...');
+      if (__DEV__) {
+        console.log('Fetching settings...');
+      }
       try {
         const result = await authorizedFetch<UserSettings>('/settings');
-        console.log('Settings fetched:', result);
+        if (__DEV__) {
+          console.log('Settings fetched:', result);
+        }
         return result;
       } catch (error) {
         console.error('Settings fetch error:', error);
@@ -30,7 +34,9 @@ export function useUserSettings() {
 
   const updateSettings = useMutation({
     mutationFn: (payload: Partial<UserSettings>) => {
-      console.log('Updating settings with payload:', payload);
+      if (__DEV__) {
+        console.log('Updating settings with payload:', payload);
+      }
       return authorizedFetch<UserSettings>('/settings', {
         method: 'PATCH',
         body: JSON.stringify(payload),

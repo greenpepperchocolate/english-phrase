@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import secrets
 
 from django.contrib.auth import get_user_model
@@ -13,6 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from . import models, serializers, services
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class FeedPagination(PageNumberPagination):
@@ -172,7 +174,7 @@ class AuthSignUpView(APIView):
             services.send_verification_email(user, str(verification_token.token))
         except Exception as e:
             # メール送信エラーはログに記録するが、サインアップ自体は成功とする
-            print(f"Failed to send verification email: {e}")
+            logger.error(f"Failed to send verification email: {e}", exc_info=True)
 
         return Response(
             {
@@ -424,7 +426,7 @@ class PasswordResetRequestView(APIView):
             try:
                 services.send_password_reset_email(user, str(reset_token.token))
             except Exception as e:
-                print(f"Failed to send password reset email: {e}")
+                logger.error(f"Failed to send password reset email: {e}", exc_info=True)
 
             # セキュリティ上、ユーザーが存在するかどうかを明かさない
             return Response(

@@ -3,11 +3,14 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import logging
 import time
 from dataclasses import dataclass
 from typing import Any
 
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(
@@ -337,8 +340,8 @@ def generate_video_thumbnail(video_file, output_key: str) -> str | None:
         return output_key
 
     except Exception as e:
-        # エラーログを出力（本番環境ではloggerを使用推奨）
-        print(f"Error generating thumbnail: {e}")
+        # エラーログを出力
+        logger.error(f"Error generating thumbnail: {e}", exc_info=True)
         # 一時ファイルのクリーンアップ
         try:
             if 'tmp_video_path' in locals():

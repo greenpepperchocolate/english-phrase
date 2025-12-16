@@ -10,7 +10,7 @@ import {
   ViewToken,
   Pressable,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/providers/AuthProvider';
 import { useSearch } from '../src/hooks/useSearch';
@@ -19,6 +19,7 @@ import { useToggleFavorite } from '../src/hooks/useToggleFavorite';
 import { useMasteredToggle } from '../src/hooks/useMasteredToggle';
 import { PhraseSummary } from '../src/api/types';
 import { VideoFeedCard, VideoFeedCardRef } from '../src/components/VideoFeedCard';
+import { ErrorFallback } from '../src/components/ErrorFallback';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -33,7 +34,18 @@ export default function SearchScreen() {
   const toggleFavorite = useToggleFavorite();
   const toggleMastered = useMasteredToggle();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isFocused, setIsFocused] = useState(true);
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
+
+  // 画面がフォーカスされているかを検出
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+      };
+    }, [])
+  );
 
   const favoriteIds = useMemo(() => {
     if (!favorites.data) {
@@ -96,7 +108,7 @@ export default function SearchScreen() {
         }
       }}
       phrase={item}
-      isActive={index === activeIndex}
+      isActive={index === activeIndex && isFocused}
       isFavorite={favoriteIds.has(item.id)}
       isMastered={item.is_mastered}
       onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
@@ -129,9 +141,7 @@ export default function SearchScreen() {
           <ActivityIndicator size="large" color="#ffffff" />
         </View>
       ) : search.isError ? (
-        <View style={styles.loading}>
-          <Text style={styles.errorText}>Error loading search results</Text>
-        </View>
+        <ErrorFallback error={search.error} onRetry={() => search.refetch()} />
       ) : items.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>😔</Text>

@@ -1,4 +1,6 @@
-﻿import { StatusBar, StyleSheet, View } from 'react-native';
+﻿import { useCallback, useState } from 'react';
+import { StatusBar, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { FeedList } from '../src/components/FeedList';
 
 // カテゴリ選択機能は現在無効化
@@ -11,6 +13,17 @@ import { FeedList } from '../src/components/FeedList';
 
 export default function FeedScreen() {
   const topic = undefined; // 全てのトピックを表示
+  const [isFocused, setIsFocused] = useState(true);
+
+  // 画面がフォーカスされているかを検出
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+      };
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -29,7 +42,7 @@ export default function FeedScreen() {
         ))}
       </View> */}
 
-      <FeedList key={topic ?? 'all'} topic={topic} />
+      <FeedList key={topic ?? 'all'} topic={topic} isFocused={isFocused} />
     </View>
   );
 }

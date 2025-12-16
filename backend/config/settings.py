@@ -133,15 +133,17 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [
-    "http://192.168.3.4",
-    "http://192.168.3.4:8000",   # Django API
-    "http://localhost:8081",
-    "http://localhost:19006",
-    "http://192.168.3.4:8081",   # LAN上のExpo DevTools
-    "http://192.168.3.4:8080",   # LAN上のMetro Bundler
-    "http://192.168.3.4:19006",  # LAN上のExpo web
-]
+# CORS設定を環境変数から取得（カンマ区切りで複数指定可能）
+CORS_ALLOWED_ORIGINS_ENV = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+if CORS_ALLOWED_ORIGINS_ENV:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
+else:
+    # 開発環境のデフォルト設定
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:8081",
+        "http://localhost:19006",
+    ]
+
 # ※ネイティブアプリ（Expo Go）からはCORS不要
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.+\.r2\.dev$",

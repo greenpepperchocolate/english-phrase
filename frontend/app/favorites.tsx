@@ -1,12 +1,13 @@
 ﻿import { useMemo, useRef, useState, useCallback } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View, ViewToken } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../src/providers/AuthProvider';
 import { useFavorites } from '../src/hooks/useFavorites';
 import { useToggleFavorite } from '../src/hooks/useToggleFavorite';
 import { useMasteredToggle } from '../src/hooks/useMasteredToggle';
 import { PhraseSummary } from '../src/api/types';
 import { VideoFeedCard, VideoFeedCardRef } from '../src/components/VideoFeedCard';
+import { ErrorFallback } from '../src/components/ErrorFallback';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -17,7 +18,18 @@ export default function FavoritesScreen() {
   const toggleFavorite = useToggleFavorite();
   const toggleMastered = useMasteredToggle();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isFocused, setIsFocused] = useState(true);
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
+
+  // 画面がフォーカスされているかを検出
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+      };
+    }, [])
+  );
 
   const items = useMemo(() => favorites.data?.pages.flatMap((page) => page.results) ?? [], [favorites.data]);
 
@@ -63,7 +75,7 @@ export default function FavoritesScreen() {
         }
       }}
       phrase={item}
-      isActive={index === activeIndex}
+      isActive={index === activeIndex && isFocused}
       isFavorite={true}
       isMastered={item.is_mastered}
       onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
@@ -83,11 +95,7 @@ export default function FavoritesScreen() {
   }
 
   if (favorites.isError) {
-    return (
-      <View style={styles.loading}>
-        <Text style={styles.errorText}>Error loading favorites</Text>
-      </View>
-    );
+    return <ErrorFallback error={favorites.error} onRetry={() => favorites.refetch()} />;
   }
 
   return (

@@ -2,9 +2,8 @@
 .env
 .env.local
 .env.*.local
-.env.example
 backend/.env
-backend/.env.example
+frontend/.env
 
 # Python
 __pycache__/
@@ -56,6 +55,7 @@ frontend/.expo/
 *.swp
 *.swo
 *~
+.claude/
 
 # OS
 .DS_Store

@@ -8,14 +8,16 @@ import { useToggleFavorite } from '../hooks/useToggleFavorite';
 import { useMasteredToggle } from '../hooks/useMasteredToggle';
 import { PhraseSummary } from '../api/types';
 import { VideoFeedCard, VideoFeedCardRef } from './VideoFeedCard';
+import { ErrorFallback } from './ErrorFallback';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface Props {
   topic?: string;
+  isFocused?: boolean;
 }
 
-export function FeedList({ topic }: Props) {
+export function FeedList({ topic, isFocused = true }: Props) {
   const router = useRouter();
   const { tokens } = useAuth();
   const feed = useFeed({ topic, pageSize: 10 });
@@ -84,7 +86,7 @@ export function FeedList({ topic }: Props) {
         }
       }}
       phrase={item}
-      isActive={index === activeIndex}
+      isActive={index === activeIndex && isFocused}
       isFavorite={favoriteIds.has(item.id)}
       isMastered={item.is_mastered}
       onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
@@ -104,11 +106,7 @@ export function FeedList({ topic }: Props) {
   }
 
   if (feed.isError) {
-    return (
-      <View style={styles.loading}>
-        <Text style={styles.errorText}>Error loading feed</Text>
-      </View>
-    );
+    return <ErrorFallback error={feed.error} onRetry={() => feed.refetch()} />;
   }
 
   return (

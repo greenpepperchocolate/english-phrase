@@ -2,6 +2,9 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../utils/config';
 
+// Sentryは本番ビルド時のみ有効化
+// 開発環境では無効化（モジュール解決の問題を回避）
+
 type AuthTokens = {
   accessToken: string;
   refreshToken: string;
@@ -41,11 +44,13 @@ const TOKEN_KEY = 'englishPhraseTokens';
 class ApiError extends Error {
   status: number;
   data: unknown;
+  isNetworkError: boolean;
 
-  constructor(message: string, status: number, data: unknown) {
+  constructor(message: string, status: number, data: unknown, isNetworkError = false) {
     super(message);
     this.status = status;
     this.data = data;
+    this.isNetworkError = isNetworkError;
   }
 }
 
@@ -53,7 +58,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
-  console.log('📡 Fetching:', url);
+  if (__DEV__) {
+    console.log('📡 Fetching:', url);
+  }
 
   try {
     const res = await fetch(url, {
@@ -64,7 +71,9 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
 
-    console.log('📥 Response status:', res.status);
+    if (__DEV__) {
+      console.log('📥 Response status:', res.status);
+    }
 
     if (!res.ok) {
       let data: unknown = null;
@@ -75,7 +84,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
         data = text;
       }
       console.error('❌ Request failed:', res.status, data);
-      throw new ApiError(res.statusText || 'Request failed', res.status, data);
+      throw new ApiError(res.statusText || 'Request failed', res.status, data, false);
     }
 
     if (res.status === 204) {
@@ -85,7 +94,27 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     return res.json() as Promise<T>;
   } catch (error) {
     console.error('❌ Network error:', error);
-    throw error;
+
+    // ネットワークエラーの場合、ApiErrorでラップする
+    if (error instanceof ApiError) {
+      // 本番ビルドではSentryが自動的にエラーを収集
+      throw error;
+    }
+
+    // TypeError（ネットワーク切断など）の場合
+    if (error instanceof TypeError) {
+      const networkError = new ApiError('ネットワークに接続できません', 0, null, true);
+      throw networkError;
+    }
+
+    // その他のエラー
+    const unknownError = new ApiError(
+      error instanceof Error ? error.message : 'Unknown error',
+      0,
+      null,
+      true
+    );
+    throw unknownError;
   }
 }
 
@@ -182,7 +211,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInAnonymously = useCallback(
     async (deviceId?: string) => {
-      console.log('🚀 Attempting anonymous login to:', `${API_BASE_URL}/auth/anonymous`);
+      if (__DEV__) {
+        console.log('🚀 Attempting anonymous login to:', `${API_BASE_URL}/auth/anonymous`);
+      }
       const data = await fetchJson<{ access_token: string; refresh_token: string; expires_in: number; anonymous: boolean }>(
         '/auth/anonymous',
         {
@@ -190,7 +221,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ device_id: deviceId }),
         }
       );
-      console.log('✅ Anonymous login successful');
+      if (__DEV__) {
+        console.log('✅ Anonymous login successful');
+      }
       const next = hydrateTokens(data);
       await persistTokens(next);
     },
