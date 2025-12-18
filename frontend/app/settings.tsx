@@ -1,9 +1,11 @@
 ﻿import { useEffect, useState } from 'react';
 import { Alert, Button, Pressable, SafeAreaView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useUserSettings } from '../src/hooks/useUserSettings';
 import { useAuth } from '../src/providers/AuthProvider';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { settingsQuery, updateSettings } = useUserSettings();
   const { signOut, deleteAccount, tokens } = useAuth();
   const [showJapanese, setShowJapanese] = useState(true);
@@ -127,9 +129,26 @@ export default function SettingsScreen() {
         </Text>
         {!isGuest && <Button title="保存" onPress={handleSave} disabled={updateSettings.isPending} />}
       </View>
+      <View style={styles.card}>
+        <Text style={styles.label}>法的情報</Text>
+        <Pressable
+          style={styles.linkButton}
+          onPress={() => router.push('/privacy-policy')}
+        >
+          <Text style={styles.linkButtonText}>プライバシーポリシー</Text>
+          <Text style={styles.linkButtonArrow}>›</Text>
+        </Pressable>
+        <Pressable
+          style={styles.linkButton}
+          onPress={() => router.push('/terms-of-service')}
+        >
+          <Text style={styles.linkButtonText}>利用規約</Text>
+          <Text style={styles.linkButtonArrow}>›</Text>
+        </Pressable>
+      </View>
       <View style={styles.footer}>
         <Text style={styles.info}>{isGuest ? 'ゲストアカウント' : 'ログイン中'}</Text>
-        <Button title="ログアウト" onPress={signOut} />
+        {!isGuest && <Button title="ログアウト" onPress={signOut} />}
         {!isGuest && (
           <Pressable
             style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
@@ -292,5 +311,23 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  linkButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  linkButtonText: {
+    fontSize: 16,
+    color: '#1d4ed8',
+    fontWeight: '500',
+  },
+  linkButtonArrow: {
+    fontSize: 24,
+    color: '#94a3b8',
+    fontWeight: '300',
   },
 });

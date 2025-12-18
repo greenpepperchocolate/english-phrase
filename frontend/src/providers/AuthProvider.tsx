@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import type { QueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../utils/config';
 
 // Sentryは本番ビルド時のみ有効化
@@ -31,6 +32,7 @@ type SignUpResponse = {
 type AuthContextValue = {
   tokens: AuthTokens | null;
   isBootstrapping: boolean;
+  isAuthenticated: boolean;
   signUp: (payload: SignUpPayload) => Promise<SignUpResponse>;
   signIn: (payload: LoginPayload) => Promise<void>;
   signInAnonymously: (deviceId?: string) => Promise<void>;
@@ -63,13 +65,20 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   try {
+    // タイムアウト処理（デフォルト30秒）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const res = await fetch(url, {
       ...init,
       headers: {
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (__DEV__) {
       console.log('📥 Response status:', res.status);
@@ -127,7 +136,7 @@ function hydrateTokens(data: { access_token: string; refresh_token: string; expi
   };
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children, queryClient }: { children: ReactNode; queryClient?: QueryClient }) {
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -232,7 +241,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await persistTokens(null);
-  }, [persistTokens]);
+    // ログアウト時にReact Queryのキャッシュをクリア
+    queryClient?.clear();
+  }, [persistTokens, queryClient]);
 
   const deleteAccount = useCallback(async () => {
     if (!tokens) {
@@ -249,7 +260,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // 削除成功後、ローカルのトークンをクリア
     await persistTokens(null);
-  }, [persistTokens, tokens]);
+    // アカウント削除時にReact Queryのキャッシュをクリア
+    queryClient?.clear();
+  }, [persistTokens, tokens, queryClient]);
 
   const authorizedFetch = useCallback(
     async <T,>(path: string, init?: RequestInit): Promise<T> => {
@@ -289,7 +302,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ tokens, isBootstrapping, signUp, signIn, signInAnonymously, signOut, deleteAccount, authorizedFetch }),
+    () => ({
+      tokens,
+      isBootstrapping,
+      isAuthenticated: !!tokens,
+      signUp,
+      signIn,
+      signInAnonymously,
+      signOut,
+      deleteAccount,
+      authorizedFetch
+    }),
     [authorizedFetch, isBootstrapping, signUp, signIn, signInAnonymously, signOut, deleteAccount, tokens]
   );
 

@@ -9,6 +9,7 @@ urlpatterns = [
     path("mastered/toggle", views.MasteredToggleView.as_view(), name="mastered-toggle"),
     path("favorites", views.FavoritesListView.as_view(), name="favorites"),
     path("progress", views.ProgressListView.as_view(), name="progress"),
+    path("mastery-rate", views.MasteryRateView.as_view(), name="mastery-rate"),
     path("logs/play", views.PlaybackLogCreateView.as_view(), name="logs-play"),
     path("settings", views.UserSettingsView.as_view(), name="user-settings"),
     path("media/signed-url", views.MediaSignedUrlView.as_view(), name="media-signed-url"),

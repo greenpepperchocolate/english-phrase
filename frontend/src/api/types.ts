@@ -67,3 +67,9 @@ export type PlaybackLogPayload = {
   device_type?: string;
   network_type?: string;
 };
+
+export type MasteryRate = {
+  mastered_count: number;
+  total_count: number;
+  mastery_rate: number;
+};

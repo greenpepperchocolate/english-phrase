@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../src/providers/AuthProvider';
-import { AppQueryClientProvider } from '../src/providers/QueryProvider';
+import { AppQueryClientProvider, queryClient } from '../src/providers/QueryProvider';
 import { AuthBoundary } from '../src/components/AuthBoundary';
 
 // Sentryの初期化は本番ビルド時のみ
@@ -17,7 +17,7 @@ export default function RootLayout() {
     }
   }, []);
   return (
-    <AuthProvider>
+    <AuthProvider queryClient={queryClient}>
       <AppQueryClientProvider>
         <AuthBoundary>
           <StatusBar style="auto" />
@@ -68,6 +68,18 @@ export default function RootLayout() {
               options={{
                 title: 'Reset Password',
                 headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="privacy-policy"
+              options={{
+                title: 'プライバシーポリシー',
+              }}
+            />
+            <Stack.Screen
+              name="terms-of-service"
+              options={{
+                title: '利用規約',
               }}
             />
           </Stack>

@@ -47,5 +47,7 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
       return authorizedFetch<CursorPaginatedResponse<PhraseSummary>>(path);
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
+    // メモリ管理: FlatListのremoveClippedSubviewsとwindowSizeで最適化済み
+    // maxPagesは設定しない（戻るスクロールを可能にするため）
   });
 }

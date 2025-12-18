@@ -2,6 +2,7 @@
 import { StatusBar, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { FeedList } from '../src/components/FeedList';
+import { MasteryRateDisplay } from '../src/components/MasteryRateDisplay';
 
 // カテゴリ選択機能は現在無効化
 // const TOPICS = [
@@ -42,6 +43,7 @@ export default function FeedScreen() {
         ))}
       </View> */}
 
+      <MasteryRateDisplay />
       <FeedList key={topic ?? 'all'} topic={topic} isFocused={isFocused} />
     </View>
   );

@@ -117,6 +117,12 @@ export default function FavoritesScreen() {
         offset: SCREEN_HEIGHT * index,
         index,
       })}
+      // メモリ最適化設定
+      removeClippedSubviews={true}
+      windowSize={3}
+      maxToRenderPerBatch={2}
+      initialNumToRender={2}
+      updateCellsBatchingPeriod={50}
       ListEmptyComponent={() => (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>⭐</Text>

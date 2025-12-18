@@ -43,5 +43,7 @@ export function useFavorites() {
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     initialPageParam: 1,
+    // メモリ管理: FlatListのremoveClippedSubviewsとwindowSizeで最適化済み
+    // maxPagesは設定しない（戻るスクロールを可能にするため）
   });
 }

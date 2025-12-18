@@ -51,5 +51,7 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     initialPageParam: 1,
     enabled: query.length > 0, // 検索クエリがある場合のみ実行
+    // メモリ管理: FlatListのremoveClippedSubviewsとwindowSizeで最適化済み
+    // maxPagesは設定しない（戻るスクロールを可能にするため）
   });
 }

@@ -17,6 +17,7 @@ export function useMasteredToggle() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: ['mastery-rate'] });
     },
   });
 }

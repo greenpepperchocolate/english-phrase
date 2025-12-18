@@ -402,6 +402,30 @@ class ProgressListView(generics.ListAPIView):
         )
 
 
+class MasteryRateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        # マスター済みのフレーズ数を取得
+        mastered_count = models.UserProgress.objects.filter(
+            user=request.user,
+            is_mastered=True,
+            phrase__isnull=False,
+        ).count()
+
+        # 全フレーズ数を取得
+        total_count = models.Phrase.objects.count()
+
+        # マスター率を計算（パーセンテージ）
+        mastery_rate = (mastered_count / total_count * 100) if total_count > 0 else 0
+
+        return Response({
+            "mastered_count": mastered_count,
+            "total_count": total_count,
+            "mastery_rate": round(mastery_rate, 1),
+        })
+
+
 class PasswordResetRequestView(APIView):
     permission_classes = [permissions.AllowAny]
 
