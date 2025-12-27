@@ -1,8 +1,114 @@
 ﻿import { useEffect, useState } from 'react';
-import { Alert, Button, Pressable, SafeAreaView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Button, Pressable, SafeAreaView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserSettings } from '../src/hooks/useUserSettings';
 import { useAuth } from '../src/providers/AuthProvider';
+
+function ContactForm() {
+  const { authorizedFetch } = useAuth();
+  const [subject, setSubject] = useState<'bug_report' | 'feature_request' | 'other'>('bug_report');
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const subjectOptions = [
+    { value: 'bug_report' as const, label: 'バグ報告' },
+    { value: 'feature_request' as const, label: '機能リクエスト' },
+    { value: 'other' as const, label: 'その他' },
+  ];
+
+  const handleSubmit = async () => {
+    if (!message.trim()) {
+      Alert.alert('エラー', 'メッセージを入力してください。');
+      return;
+    }
+
+    if (message.trim().length < 10) {
+      Alert.alert('エラー', 'メッセージは10文字以上入力してください。');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await authorizedFetch('/contact/submit', {
+        method: 'POST',
+        body: JSON.stringify({
+          subject,
+          message: message.trim(),
+        }),
+      });
+
+      Alert.alert(
+        '送信完了',
+        'お問い合わせを受け付けました。ご連絡ありがとうございます。',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setMessage('');
+              setSubject('bug_report');
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error('Contact form error:', error);
+      const errorMessage = error?.data?.detail || 'お問い合わせの送信に失敗しました。もう一度お試しください。';
+      Alert.alert('エラー', errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <View style={styles.contactFormContainer}>
+      <Text style={styles.contactLabel}>お問い合わせの種類</Text>
+      <View style={styles.pickerContainer}>
+        {subjectOptions.map((option) => (
+          <Pressable
+            key={option.value}
+            style={[
+              styles.pickerButton,
+              subject === option.value && styles.pickerButtonActive,
+              isSubmitting && styles.pickerButtonDisabled,
+            ]}
+            onPress={() => !isSubmitting && setSubject(option.value)}
+            disabled={isSubmitting}
+          >
+            <Text
+              style={[
+                styles.pickerButtonText,
+                subject === option.value && styles.pickerButtonTextActive,
+                isSubmitting && styles.pickerButtonTextDisabled,
+              ]}
+            >
+              {option.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Text style={styles.contactLabel}>メッセージ</Text>
+      <TextInput
+        style={[styles.textArea, isSubmitting && styles.textAreaDisabled]}
+        placeholder="お問い合わせ内容を入力してください（10文字以上）"
+        placeholderTextColor="#94a3b8"
+        value={message}
+        onChangeText={setMessage}
+        multiline
+        numberOfLines={6}
+        textAlignVertical="top"
+        editable={!isSubmitting}
+      />
+      <Text style={styles.characterCount}>{message.length} / 5000文字</Text>
+
+      <Button
+        title={isSubmitting ? '送信中...' : '送信'}
+        onPress={handleSubmit}
+        disabled={isSubmitting || !message.trim() || message.trim().length < 10}
+      />
+    </View>
+  );
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -129,6 +235,12 @@ export default function SettingsScreen() {
         </Text>
         {!isGuest && <Button title="保存" onPress={handleSave} disabled={updateSettings.isPending} />}
       </View>
+      {!isGuest && (
+        <View style={styles.card}>
+          <Text style={styles.label}>お問い合わせ</Text>
+          <ContactForm />
+        </View>
+      )}
       <View style={styles.card}>
         <Text style={styles.label}>法的情報</Text>
         <Pressable
@@ -329,5 +441,69 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#94a3b8',
     fontWeight: '300',
+  },
+  contactFormContainer: {
+    rowGap: 12,
+  },
+  contactLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1b263b',
+    marginTop: 4,
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  pickerButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ced4da',
+    backgroundColor: '#ffffff',
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  pickerButtonActive: {
+    borderColor: '#1d4ed8',
+    backgroundColor: '#1d4ed8',
+  },
+  pickerButtonDisabled: {
+    backgroundColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
+    opacity: 0.6,
+  },
+  pickerButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1b263b',
+  },
+  pickerButtonTextActive: {
+    color: '#ffffff',
+  },
+  pickerButtonTextDisabled: {
+    color: '#cbd5e1',
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#1b263b',
+    minHeight: 120,
+    maxHeight: 200,
+  },
+  textAreaDisabled: {
+    backgroundColor: '#f1f5f9',
+    color: '#94a3b8',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'right',
+    marginTop: -8,
   },
 });

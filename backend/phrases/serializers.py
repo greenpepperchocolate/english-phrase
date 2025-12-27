@@ -272,3 +272,28 @@ class SignUpSerializer(serializers.Serializer):
             password=password
         )
         return user
+
+
+class ContactFormSerializer(serializers.Serializer):
+    subject = serializers.ChoiceField(
+        choices=[
+            ('bug_report', 'Bug Report'),
+            ('feature_request', 'Feature Request'),
+            ('other', 'Other'),
+        ]
+    )
+    message = serializers.CharField(
+        min_length=10,
+        max_length=5000,
+        error_messages={
+            'min_length': 'Message must be at least 10 characters long.',
+            'max_length': 'Message cannot exceed 5000 characters.',
+        }
+    )
+
+    def validate_message(self, value):
+        # Strip whitespace and validate non-empty
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Message cannot be empty or whitespace only.")
+        return value

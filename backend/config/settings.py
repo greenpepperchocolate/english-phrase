@@ -179,6 +179,7 @@ if SENDGRID_API_KEY:
     EMAIL_USE_TLS = True
     EMAIL_HOST_USER = "apikey"
     EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
+    EMAIL_TIMEOUT = 30  # SMTP接続タイムアウト（秒）
 else:
     # Gmail SMTP fallback for development
     EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
@@ -187,9 +188,12 @@ else:
     EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
     EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
     EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_TIMEOUT = 30  # SMTP接続タイムアウト（秒）
 
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@eitango.club")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8081")
 # Deep link scheme for mobile apps (used in email verification links)
 APP_DEEP_LINK_SCHEME = os.environ.get("APP_DEEP_LINK_SCHEME", "")
+# Admin email for contact form submissions
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", DEFAULT_FROM_EMAIL)
 

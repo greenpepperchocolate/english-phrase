@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View, ViewToken } from 'react-native';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../providers/AuthProvider';
 import { useFeed } from '../hooks/useFeed';
@@ -12,10 +12,18 @@ import { ErrorFallback } from './ErrorFallback';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// FlatListの外で定義して安定性を確保
+const VIEWABILITY_CONFIG: ViewabilityConfig = {
+  itemVisiblePercentThreshold: 80,
+};
+
 interface Props {
   topic?: string;
   isFocused?: boolean;
 }
+
+// メモ化されたアイテムコンポーネント
+const MemoizedVideoFeedCard = React.memo(VideoFeedCard);
 
 export function FeedList({ topic, isFocused = true }: Props) {
   const router = useRouter();
@@ -25,7 +33,14 @@ export function FeedList({ topic, isFocused = true }: Props) {
   const toggleFavorite = useToggleFavorite();
   const toggleMastered = useMasteredToggle();
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0); // 安定したコールバック用
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
+  const isFetchingRef = useRef(false);
+
+  // activeIndexRefを同期
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   const favoriteIds = useMemo(() => {
     if (!favorites.data) {
@@ -37,67 +52,113 @@ export function FeedList({ topic, isFocused = true }: Props) {
 
   const items = useMemo(() => feed.data?.pages.flatMap((page) => page.results) ?? [], [feed.data]);
 
+  // 安定したコールバック（依存配列を空にして再生成を防止）
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0) {
         const index = viewableItems[0].index;
-        if (index !== null && index !== activeIndex) {
+        if (index !== null && index !== activeIndexRef.current) {
           setActiveIndex(index);
         }
       }
     },
-    [activeIndex]
+    [] // 依存配列を空にして安定化
   );
 
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 80,
-  });
-
   const flatListRef = useRef<FlatList>(null);
+  const fetchNextPageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleEndReached = () => {
-    // 追加のページがあればフェッチ
-    if (feed.hasNextPage && !feed.isFetchingNextPage) {
-      feed.fetchNextPage();
+  // フェッチ状態を同期的に管理
+  useEffect(() => {
+    isFetchingRef.current = feed.isFetchingNextPage;
+  }, [feed.isFetchingNextPage]);
+
+  // クリーンアップ: アンマウント時にタイマーをクリア
+  useEffect(() => {
+    return () => {
+      if (fetchNextPageTimeoutRef.current) {
+        clearTimeout(fetchNextPageTimeoutRef.current);
+        fetchNextPageTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // デバウンス処理: feed依存を削除して安定化
+  const debouncedFetchNextPage = useCallback(() => {
+    // 既存のタイマーをクリア
+    if (fetchNextPageTimeoutRef.current) {
+      clearTimeout(fetchNextPageTimeoutRef.current);
+      fetchNextPageTimeoutRef.current = null;
     }
-  };
+
+    // 既にフェッチ中なら何もしない（重要！）
+    if (isFetchingRef.current) {
+      return;
+    }
+
+    // 300ms後にフェッチ（500ms→300msに短縮してレスポンス向上）
+    fetchNextPageTimeoutRef.current = setTimeout(() => {
+      // タイムアウト時点でも二重チェック
+      if (feed.hasNextPage && !isFetchingRef.current) {
+        isFetchingRef.current = true; // 先にフラグを立てる
+        feed.fetchNextPage().catch((error) => {
+          // エラーをキャッチして無視（AbortErrorなど）
+          console.log('Fetch next page error (ignored):', error?.message);
+        }).finally(() => {
+          isFetchingRef.current = false; // フラグをクリア
+        });
+      }
+      fetchNextPageTimeoutRef.current = null;
+    }, 300);
+  }, [feed]);
+
+  const handleEndReached = useCallback(() => {
+    // onEndReachedは複数回呼ばれることがあるため、厳密にチェック
+    if (!feed.hasNextPage || isFetchingRef.current) {
+      return;
+    }
+    debouncedFetchNextPage();
+  }, [feed.hasNextPage, debouncedFetchNextPage]);
 
   const handleAutoSwipe = useCallback(() => {
     // 次の動画にスクロール
     const nextIndex = activeIndex + 1;
     if (nextIndex < items.length) {
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-      // scrollToIndexを呼ぶと、onViewableItemsChangedが呼ばれてactiveIndexが更新される
-      // ので、ここで手動で setActiveIndex を呼ぶ必要はない
     }
-    // 最後に近づいたら次のページをプリフェッチ（残り5件）
-    if (nextIndex >= items.length - 5 && feed.hasNextPage && !feed.isFetchingNextPage) {
-      feed.fetchNextPage();
+    // 最後に近づいたら次のページをプリフェッチ（残り3件に短縮）
+    if (nextIndex >= items.length - 3 && feed.hasNextPage && !isFetchingRef.current) {
+      debouncedFetchNextPage();
     }
-  }, [activeIndex, items.length, feed]);
+  }, [activeIndex, items.length, feed.hasNextPage, debouncedFetchNextPage]);
 
-  const renderItem = ({ item, index }: { item: PhraseSummary; index: number }) => (
-    <VideoFeedCard
-      ref={(ref) => {
-        if (ref) {
-          videoRefs.current.set(index, ref);
-        } else {
-          videoRefs.current.delete(index);
-        }
-      }}
-      phrase={item}
-      isActive={index === activeIndex && isFocused}
-      isFavorite={favoriteIds.has(item.id)}
-      isMastered={item.is_mastered}
-      onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
-      onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
-      onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
-      onAutoSwipe={handleAutoSwipe}
-      isGuest={tokens?.anonymous}
-    />
+  // renderItemをuseCallbackでメモ化
+  const renderItem = useCallback(
+    ({ item, index }: { item: PhraseSummary; index: number }) => (
+      <MemoizedVideoFeedCard
+        ref={(ref) => {
+          if (ref) {
+            videoRefs.current.set(index, ref);
+          } else {
+            videoRefs.current.delete(index);
+          }
+        }}
+        phrase={item}
+        isActive={index === activeIndex && isFocused}
+        isFavorite={favoriteIds.has(item.id)}
+        isMastered={item.is_mastered}
+        onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
+        onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
+        onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
+        onAutoSwipe={handleAutoSwipe}
+        isGuest={tokens?.anonymous}
+      />
+    ),
+    [activeIndex, isFocused, favoriteIds, router, toggleFavorite, toggleMastered, handleAutoSwipe, tokens?.anonymous]
   );
 
-  if (feed.isLoading) {
+  // 初回ロード中のみローディング表示
+  if (feed.isLoading && !feed.data) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#ffffff" />
@@ -105,7 +166,8 @@ export function FeedList({ topic, isFocused = true }: Props) {
     );
   }
 
-  if (feed.isError) {
+  // エラーでも既存データがあればスワイプ可能にする
+  if (feed.isError && !feed.data) {
     return <ErrorFallback error={feed.error} onRetry={() => feed.refetch()} />;
   }
 
@@ -120,9 +182,9 @@ export function FeedList({ topic, isFocused = true }: Props) {
       decelerationRate="fast"
       showsVerticalScrollIndicator={false}
       onViewableItemsChanged={onViewableItemsChanged}
-      viewabilityConfig={viewabilityConfig.current}
+      viewabilityConfig={VIEWABILITY_CONFIG}
       onEndReached={handleEndReached}
-      onEndReachedThreshold={0.3}
+      onEndReachedThreshold={0.5}
       getItemLayout={(data, index) => ({
         length: SCREEN_HEIGHT,
         offset: SCREEN_HEIGHT * index,

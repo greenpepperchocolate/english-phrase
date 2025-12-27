@@ -1,9 +1,9 @@
 export default {
   expo: {
-    name: 'English Phrase',
-    slug: 'english-phrase',
+    name: '映単語',
+    slug: 'eitango',
     version: '0.1.0',
-    scheme: 'englishphrase',
+    scheme: 'eitango',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -54,7 +54,7 @@ export default {
       //   '@sentry/react-native/expo',
       //   {
       //     organization: 'your-sentry-org',
-      //     project: 'english-phrase-app',
+      //     project: 'eitango',
       //   }
       // ],
     ],

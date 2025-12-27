@@ -53,5 +53,16 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
     enabled: query.length > 0, // 検索クエリがある場合のみ実行
     // メモリ管理: FlatListのremoveClippedSubviewsとwindowSizeで最適化済み
     // maxPagesは設定しない（戻るスクロールを可能にするため）
+
+    // React Query設定: 1000回スワイプでもエラーが出ないように最適化
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    retry: false,
+    retryOnMount: false,
+    throwOnError: false,
+    networkMode: 'offlineFirst',
   });
 }

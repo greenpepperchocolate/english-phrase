@@ -1,5 +1,5 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Alert, Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View, ViewToken } from 'react-native';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Alert, Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
 import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,14 @@ import { useAuth } from '../providers/AuthProvider';
 import { ExpressionVideoCard, ExpressionVideoCardRef } from './ExpressionVideoCard';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// 安定したviewabilityConfig
+const HORIZONTAL_VIEWABILITY_CONFIG: ViewabilityConfig = {
+  itemVisiblePercentThreshold: 80,
+};
+
+// Audio modeの初期化フラグ（グローバル）
+let isAudioModeInitialized = false;
 
 interface Props {
   phrase: PhraseSummary;
@@ -50,12 +58,18 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const horizontalFlatListRef = useRef<FlatList>(null);
     const [shouldPlayVideo, setShouldPlayVideo] = useState(true);
     const [tabBarHeight, setTabBarHeight] = useState(0);
+    const horizontalIndexRef = useRef(0); // 安定したコールバック用
 
-    // 横スワイプアイテム: メインフレーズ + Expression動画
-    const horizontalItems = [
+    // 横スワイプアイテム: メインフレーズ + Expression動画（メモ化）
+    const horizontalItems = useMemo(() => [
       { type: 'phrase' as const, data: phrase },
       ...(phrase.expressions || []).map(pe => ({ type: 'expression' as const, data: pe.expression }))
-    ];
+    ], [phrase]);
+
+    // horizontalIndexRefを同期
+    useEffect(() => {
+      horizontalIndexRef.current = horizontalIndex;
+    }, [horizontalIndex]);
 
     useImperativeHandle(ref, () => ({
       play: async () => {
@@ -70,30 +84,30 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       },
     }));
 
-    // Audio modeを設定（音声再生を有効化）
+    // Audio modeを設定（音声再生を有効化）- 初回のみ
     useEffect(() => {
-      Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-      });
+      if (!isAudioModeInitialized) {
+        isAudioModeInitialized = true;
+        Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        });
+      }
     }, []);
 
+    // 安定したコールバック（依存配列を空にして再生成を防止）
     const onHorizontalViewableItemsChanged = useCallback(
       ({ viewableItems }: { viewableItems: ViewToken[] }) => {
         if (viewableItems.length > 0) {
           const index = viewableItems[0].index;
-          if (index !== null && index !== horizontalIndex) {
+          if (index !== null && index !== horizontalIndexRef.current) {
             setHorizontalIndex(index);
           }
         }
       },
-      [horizontalIndex]
+      [] // 依存配列を空にして安定化
     );
-
-    const horizontalViewabilityConfig = useRef({
-      itemVisiblePercentThreshold: 80,
-    });
 
     // phrase idが変わった時に横スワイプとカウントをリセット
     useEffect(() => {
@@ -390,7 +404,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           decelerationRate="fast"
           showsHorizontalScrollIndicator={false}
           onViewableItemsChanged={onHorizontalViewableItemsChanged}
-          viewabilityConfig={horizontalViewabilityConfig.current}
+          viewabilityConfig={HORIZONTAL_VIEWABILITY_CONFIG}
           getItemLayout={(data, index) => ({
             length: SCREEN_WIDTH,
             offset: SCREEN_WIDTH * index,

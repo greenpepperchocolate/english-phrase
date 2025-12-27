@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import type { QueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../utils/config';
@@ -41,7 +41,7 @@ type AuthContextValue = {
   authorizedFetch: <T>(path: string, init?: RequestInit) => Promise<T>;
 };
 
-const TOKEN_KEY = 'englishPhraseTokens';
+const TOKEN_KEY = 'eitangoTokens';
 
 class ApiError extends Error {
   status: number;
@@ -58,16 +58,16 @@ class ApiError extends Error {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+async function fetchJson<T>(path: string, init?: RequestInit, timeoutMs = 60000): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
   if (__DEV__) {
     console.log('📡 Fetching:', url);
   }
 
   try {
-    // タイムアウト処理（デフォルト30秒）
+    // タイムアウト処理（デフォルト60秒、メール送信などの重い処理に対応）
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const res = await fetch(url, {
       ...init,
@@ -110,6 +110,17 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
       throw error;
     }
 
+    // AbortError（タイムアウト）の場合
+    if (error instanceof Error && error.name === 'AbortError') {
+      const timeoutError = new ApiError(
+        'リクエストがタイムアウトしました。ネットワーク接続を確認してください。',
+        0,
+        null,
+        true
+      );
+      throw timeoutError;
+    }
+
     // TypeError（ネットワーク切断など）の場合
     if (error instanceof TypeError) {
       const networkError = new ApiError('ネットワークに接続できません', 0, null, true);
@@ -139,7 +150,7 @@ function hydrateTokens(data: { access_token: string; refresh_token: string; expi
 export function AuthProvider({ children, queryClient }: { children: ReactNode; queryClient?: QueryClient }) {
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const refreshPromiseRef = useRef<Promise<AuthTokens | null> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -167,33 +178,48 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
   }, []);
 
   const refreshTokens = useCallback(async () => {
-    if (!tokens || refreshing) {
+    if (!tokens) {
       return tokens;
     }
     if (tokens.expiresAt > Date.now() + 30_000) {
       return tokens;
     }
-    setRefreshing(true);
-    try {
-      const data = await fetchJson<{ access_token: string; refresh_token: string; expires_in: number }>('/auth/refresh', {
-        method: 'POST',
-        body: JSON.stringify({ refresh_token: tokens.refreshToken }),
-      });
-      const next: AuthTokens = {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token ?? tokens.refreshToken,
-        anonymous: tokens.anonymous,
-        expiresAt: Date.now() + data.expires_in * 1000,
-      };
-      await persistTokens(next);
-      return next;
-    } catch (error) {
-      await persistTokens(null);
-      throw error;
-    } finally {
-      setRefreshing(false);
+
+    // 既にリフレッシュ中の場合、同じPromiseを返す（競合制御）
+    if (refreshPromiseRef.current !== null) {
+      return refreshPromiseRef.current;
     }
-  }, [persistTokens, refreshing, tokens]);
+
+    const promise = (async () => {
+      try {
+        const data = await fetchJson<{ access_token: string; refresh_token: string; expires_in: number }>('/auth/refresh', {
+          method: 'POST',
+          body: JSON.stringify({ refresh_token: tokens.refreshToken }),
+        });
+        const next: AuthTokens = {
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token ?? tokens.refreshToken,
+          anonymous: tokens.anonymous,
+          expiresAt: Date.now() + data.expires_in * 1000,
+        };
+        await persistTokens(next);
+        return next;
+      } catch (error) {
+        await persistTokens(null);
+        throw error;
+      }
+    })();
+
+    // Promiseをキャッシュ
+    refreshPromiseRef.current = promise;
+
+    try {
+      return await promise;
+    } finally {
+      // 完了後、キャッシュをクリア
+      refreshPromiseRef.current = null;
+    }
+  }, [persistTokens, tokens]);
 
   const signUp = useCallback(async ({ email, password, password_confirm }: SignUpPayload): Promise<SignUpResponse> => {
     const data = await fetchJson<SignUpResponse>('/auth/signup', {
@@ -288,7 +314,8 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
       try {
         return await doFetch(activeTokens.accessToken);
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
+        // 401 Unauthorized または 400 Bad Request（Token is expired）の場合、トークンをリフレッシュしてリトライ
+        if (error instanceof ApiError && (error.status === 401 || error.status === 400)) {
           const refreshed = await refreshTokens();
           if (!refreshed) {
             throw error;

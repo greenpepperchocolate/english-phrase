@@ -201,6 +201,94 @@ def send_password_reset_email(user, token: str) -> None:
     )
 
 
+def send_contact_email(user, subject_type: str, message: str) -> None:
+    """
+    管理者に問い合わせメールを送信
+
+    Args:
+        user: 送信者のUserオブジェクト
+        subject_type: 問い合わせの種類 (bug_report, feature_request, other)
+        message: 問い合わせ内容
+    """
+    from django.core.mail import send_mail
+    from django.conf import settings
+    from django.utils import timezone
+
+    # Subject type mapping to Japanese
+    subject_mapping = {
+        'bug_report': 'バグ報告',
+        'feature_request': '機能リクエスト',
+        'other': 'その他のお問い合わせ',
+    }
+
+    subject_label = subject_mapping.get(subject_type, 'お問い合わせ')
+    email_subject = f"[映単語] {subject_label} - {user.email}"
+
+    # Plain text version
+    plain_message = f"""
+映単語アプリからのお問い合わせ
+
+種類: {subject_label}
+送信者: {user.email}
+送信日時: {timezone.now().strftime('%Y年%m月%d日 %H:%M:%S')}
+
+--- メッセージ ---
+{message}
+---
+
+※このメールは映単語アプリの問い合わせフォームから自動送信されています。
+"""
+
+    # HTML version
+    html_message = f"""
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #1d4ed8; border-bottom: 2px solid #1d4ed8; padding-bottom: 10px;">
+            映単語アプリからのお問い合わせ
+        </h2>
+
+        <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px; background-color: #f8fafc; font-weight: bold; width: 120px;">種類:</td>
+                <td style="padding: 8px;">{subject_label}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; background-color: #f8fafc; font-weight: bold;">送信者:</td>
+                <td style="padding: 8px;">{user.email}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; background-color: #f8fafc; font-weight: bold;">送信日時:</td>
+                <td style="padding: 8px;">{timezone.now().strftime('%Y年%m月%d日 %H:%M:%S')}</td>
+            </tr>
+        </table>
+
+        <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #1d4ed8; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1b263b;">メッセージ:</h3>
+            <p style="white-space: pre-wrap; margin: 0;">{message}</p>
+        </div>
+
+        <p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+            このメールは映単語アプリの問い合わせフォームから自動送信されています。
+        </p>
+    </div>
+</body>
+</html>
+"""
+
+    # Get admin email from settings
+    admin_email = getattr(settings, 'ADMIN_EMAIL', settings.DEFAULT_FROM_EMAIL)
+
+    send_mail(
+        email_subject,
+        plain_message,
+        settings.DEFAULT_FROM_EMAIL,
+        [admin_email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
+
 def _get_content_type(file_obj, key: str) -> str:
     """ファイルの適切なContent-Typeを判定"""
     import mimetypes

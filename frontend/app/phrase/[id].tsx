@@ -1,7 +1,7 @@
 ﻿import { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Video } from 'expo-av';
+import { Video, ResizeMode } from 'expo-av';
 import { usePhraseDetail } from '../../src/hooks/usePhraseDetail';
 import { useUserSettings } from '../../src/hooks/useUserSettings';
 
@@ -25,7 +25,7 @@ export default function PhraseDetailScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {phrase.video_url ? (
-        <Video source={{ uri: phrase.video_url }} style={styles.video} useNativeControls resizeMode="cover" />
+        <Video source={{ uri: phrase.video_url }} style={styles.video} useNativeControls resizeMode={ResizeMode.COVER} />
       ) : null}
       <Text style={styles.topic}>{phrase.topic}</Text>
       <Text style={styles.title}>{phrase.text}</Text>

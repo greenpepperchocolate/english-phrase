@@ -21,4 +21,5 @@ urlpatterns = [
     path("auth/delete-account", views.DeleteAccountView.as_view(), name="auth-delete-account"),
     path("auth/password-reset/request", views.PasswordResetRequestView.as_view(), name="auth-password-reset-request"),
     path("auth/password-reset/confirm", views.PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm"),
+    path("contact/submit", views.ContactFormView.as_view(), name="contact-submit"),
 ]

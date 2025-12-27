@@ -1,6 +1,6 @@
 ﻿import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video } from 'expo-av';
+import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { PhraseSummary } from '../api/types';
 import { usePlaybackLogger } from '../hooks/usePlaybackLogger';
 
@@ -39,7 +39,7 @@ export function PhraseCard({ phrase, onPress, isFavorite, onToggleFavorite }: Pr
             ref={video}
             source={{ uri: phrase.video_url }}
             style={styles.video}
-            resizeMode="cover"
+            resizeMode={ResizeMode.COVER}
             useNativeControls
             onPlaybackStatusUpdate={handlePlaybackStatus}
           />

@@ -513,6 +513,63 @@ class PasswordResetConfirmView(APIView):
             )
 
 
+class ContactFormView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = serializers.ContactFormSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        subject_type = serializer.validated_data['subject']
+        message = serializer.validated_data['message']
+        user = request.user
+
+        # Don't allow anonymous users to send contact forms
+        if user.email.startswith('anon_') and user.email.endswith('@example.com'):
+            return Response(
+                {"detail": "ゲストアカウントからはお問い合わせできません。アカウントを作成してください。"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Simple rate limiting check (max 5 contacts per hour per user)
+        from datetime import timedelta
+        from django.core.cache import cache
+
+        cache_key = f"contact_form_{user.id}"
+        contact_count = cache.get(cache_key, 0)
+
+        if contact_count >= 5:
+            return Response(
+                {"detail": "お問い合わせの送信制限に達しました。1時間後にもう一度お試しください。"},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        # Send email to admin
+        try:
+            logger.info(f"Sending contact email from user {user.email} (subject: {subject_type})")
+            services.send_contact_email(user, subject_type, message)
+            logger.info(f"Contact email sent successfully from {user.email}")
+
+            # Increment rate limit counter
+            cache.set(cache_key, contact_count + 1, 3600)  # Expire in 1 hour
+
+            return Response(
+                {"message": "お問い合わせを送信しました。ご連絡ありがとうございます。"},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            logger.error(f"Failed to send contact email from {user.email}: {type(e).__name__}: {str(e)}", exc_info=True)
+
+            # より詳細なエラーメッセージを返す（開発環境のみ）
+            from django.conf import settings
+            error_detail = str(e) if settings.DEBUG else "メール送信に失敗しました。しばらくしてからもう一度お試しください。"
+
+            return Response(
+                {"detail": error_detail},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 # Email redirect views (for opening app from email links)
 from django.shortcuts import render
 from django.conf import settings
