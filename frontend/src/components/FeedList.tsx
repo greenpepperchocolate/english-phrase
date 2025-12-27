@@ -3,7 +3,6 @@ import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View, ViewTo
 import { useRouter } from 'expo-router';
 import { useAuth } from '../providers/AuthProvider';
 import { useFeed } from '../hooks/useFeed';
-import { useFavorites } from '../hooks/useFavorites';
 import { useToggleFavorite } from '../hooks/useToggleFavorite';
 import { useMasteredToggle } from '../hooks/useMasteredToggle';
 import { PhraseSummary } from '../api/types';
@@ -29,7 +28,6 @@ export function FeedList({ topic, isFocused = true }: Props) {
   const router = useRouter();
   const { tokens } = useAuth();
   const feed = useFeed({ topic, pageSize: 10 });
-  const favorites = useFavorites();
   const toggleFavorite = useToggleFavorite();
   const toggleMastered = useMasteredToggle();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -41,14 +39,6 @@ export function FeedList({ topic, isFocused = true }: Props) {
   useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
-
-  const favoriteIds = useMemo(() => {
-    if (!favorites.data) {
-      return new Set<number>();
-    }
-    const allFavorites = favorites.data.pages.flatMap((page) => page.results);
-    return new Set<number>(allFavorites.map((item) => item.id));
-  }, [favorites.data]);
 
   const items = useMemo(() => feed.data?.pages.flatMap((page) => page.results) ?? [], [feed.data]);
 
@@ -145,7 +135,7 @@ export function FeedList({ topic, isFocused = true }: Props) {
         }}
         phrase={item}
         isActive={index === activeIndex && isFocused}
-        isFavorite={favoriteIds.has(item.id)}
+        isFavorite={item.is_favorite}
         isMastered={item.is_mastered}
         onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
         onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
@@ -154,7 +144,7 @@ export function FeedList({ topic, isFocused = true }: Props) {
         isGuest={tokens?.anonymous}
       />
     ),
-    [activeIndex, isFocused, favoriteIds, router, toggleFavorite, toggleMastered, handleAutoSwipe, tokens?.anonymous]
+    [activeIndex, isFocused, items, router, toggleFavorite, toggleMastered, handleAutoSwipe, tokens?.anonymous]
   );
 
   // 初回ロード中のみローディング表示

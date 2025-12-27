@@ -14,7 +14,6 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/providers/AuthProvider';
 import { useSearch } from '../src/hooks/useSearch';
-import { useFavorites } from '../src/hooks/useFavorites';
 import { useToggleFavorite } from '../src/hooks/useToggleFavorite';
 import { useMasteredToggle } from '../src/hooks/useMasteredToggle';
 import { PhraseSummary } from '../src/api/types';
@@ -30,7 +29,6 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const search = useSearch({ query: activeSearchQuery, pageSize: 10 });
-  const favorites = useFavorites();
   const toggleFavorite = useToggleFavorite();
   const toggleMastered = useMasteredToggle();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -46,14 +44,6 @@ export default function SearchScreen() {
       };
     }, [])
   );
-
-  const favoriteIds = useMemo(() => {
-    if (!favorites.data) {
-      return new Set<number>();
-    }
-    const allFavorites = favorites.data.pages.flatMap((page) => page.results);
-    return new Set<number>(allFavorites.map((item) => item.id));
-  }, [favorites.data]);
 
   const items = useMemo(() => search.data?.pages.flatMap((page) => page.results) ?? [], [search.data]);
 
@@ -109,7 +99,7 @@ export default function SearchScreen() {
       }}
       phrase={item}
       isActive={index === activeIndex && isFocused}
-      isFavorite={favoriteIds.has(item.id)}
+      isFavorite={item.is_favorite}
       isMastered={item.is_mastered}
       onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
       onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
