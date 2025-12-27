@@ -322,7 +322,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                   onPress={handleFavoritesListPress}
                   style={styles.iconButton}
                 >
-                  <Text style={styles.iconButtonText}>★</Text>
+                  <Text style={styles.iconButtonTextYellow}>★</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleSearchPress}
@@ -339,10 +339,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
               </View>
             </View>
 
-            <Pressable style={styles.textOverlay} onPress={onPress}>
+            <View style={styles.textOverlay}>
               <Text style={styles.phraseText}>{phrase.text}</Text>
               {showJapanese && <Text style={styles.meaningText}>{phrase.meaning}</Text>}
-            </Pressable>
+            </View>
           </View>
         );
       } else {
@@ -380,13 +380,13 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           >
             <Pressable style={styles.tabItem} onPress={() => handleTabPress(0)}>
               <Text style={[styles.tabText, horizontalIndex === 0 && styles.tabTextActive]}>
-                英単語
+                Word
               </Text>
               {horizontalIndex === 0 && <View style={styles.tabUnderline} />}
             </Pressable>
             <Pressable style={styles.tabItem} onPress={() => handleTabPress(1)}>
               <Text style={[styles.tabText, horizontalIndex > 0 && styles.tabTextActive]}>
-                サンプルフレーズ
+                Phrase
               </Text>
               {horizontalIndex > 0 && <View style={styles.tabUnderline} />}
             </Pressable>
@@ -486,9 +486,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   favoriteButton: {
+    height: 44,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 24,
+    borderRadius: 22,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   },
   favoriteIcon: {
     fontSize: 20,
-    color: '#ffffff',
+    color: '#fbbf24',
   },
   favoriteLabel: {
     fontSize: 14,
@@ -551,9 +551,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   masteredButton: {
+    height: 44,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 24,
+    borderRadius: 22,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -586,6 +586,10 @@ const styles = StyleSheet.create({
   iconButtonText: {
     fontSize: 20,
     color: '#ffffff',
+  },
+  iconButtonTextYellow: {
+    fontSize: 20,
+    color: '#fbbf24',
   },
   wrapper: {
     width: SCREEN_WIDTH,

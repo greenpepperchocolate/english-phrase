@@ -1,7 +1,29 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import type { QueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../utils/config';
+
+// ネットワークエラーアラートの重複表示を防ぐためのフラグ
+let isNetworkAlertShowing = false;
+
+function showNetworkErrorAlert() {
+  if (isNetworkAlertShowing) return;
+  isNetworkAlertShowing = true;
+  Alert.alert(
+    '接続エラー',
+    'ネットワークが不安定です',
+    [
+      {
+        text: 'OK',
+        onPress: () => {
+          isNetworkAlertShowing = false;
+        },
+      },
+    ],
+    { onDismiss: () => { isNetworkAlertShowing = false; } }
+  );
+}
 
 // Sentryは本番ビルド時のみ有効化
 // 開発環境では無効化（モジュール解決の問題を回避）
@@ -112,6 +134,7 @@ async function fetchJson<T>(path: string, init?: RequestInit, timeoutMs = 60000)
 
     // AbortError（タイムアウト）の場合
     if (error instanceof Error && error.name === 'AbortError') {
+      showNetworkErrorAlert();
       const timeoutError = new ApiError(
         'リクエストがタイムアウトしました。ネットワーク接続を確認してください。',
         0,
@@ -121,13 +144,26 @@ async function fetchJson<T>(path: string, init?: RequestInit, timeoutMs = 60000)
       throw timeoutError;
     }
 
-    // TypeError（ネットワーク切断など）の場合
+    // TypeError（ネットワーク切断、タイムアウトなど）の場合
     if (error instanceof TypeError) {
+      showNetworkErrorAlert();
+      const message = error.message || '';
+      // タイムアウトの場合
+      if (message.toLowerCase().includes('timeout') || message.toLowerCase().includes('timed out')) {
+        const timeoutError = new ApiError(
+          'サーバーへの接続がタイムアウトしました。しばらく待ってから再試行してください。',
+          0,
+          null,
+          true
+        );
+        throw timeoutError;
+      }
       const networkError = new ApiError('ネットワークに接続できません', 0, null, true);
       throw networkError;
     }
 
     // その他のエラー
+    showNetworkErrorAlert();
     const unknownError = new ApiError(
       error instanceof Error ? error.message : 'Unknown error',
       0,

@@ -185,7 +185,9 @@ export default function SearchScreen() {
       {/* 検索バーをオーバーレイとして表示 */}
       <View style={[styles.searchBar, { paddingTop: insets.top }]}>
         <Pressable style={styles.backButton} onPress={handleClose}>
-          <Text style={styles.backButtonText}>←</Text>
+          <View style={styles.backButtonInner}>
+            <Text style={styles.backButtonIcon}>‹</Text>
+          </View>
         </Pressable>
         <TextInput
           style={styles.searchInput}
@@ -228,18 +230,24 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backButton: {
+    marginRight: 8,
+  },
+  backButtonInner: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  backButtonText: {
-    fontSize: 24,
+  backButtonIcon: {
     color: '#ffffff',
-    fontWeight: '400',
+    fontSize: 32,
+    fontWeight: '300',
+    marginLeft: -2,
+    marginTop: -2,
   },
   searchInput: {
     flex: 1,

@@ -1,6 +1,7 @@
 ﻿import { useMemo, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View, ViewToken } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, Pressable, StyleSheet, Text, View, ViewToken } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/providers/AuthProvider';
 import { useFavorites } from '../src/hooks/useFavorites';
 import { useToggleFavorite } from '../src/hooks/useToggleFavorite';
@@ -13,6 +14,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function FavoritesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { tokens } = useAuth();
   const favorites = useFavorites();
   const toggleFavorite = useToggleFavorite();
@@ -99,42 +101,85 @@ export default function FavoritesScreen() {
   }
 
   return (
-    <FlatList
-      ref={flatListRef}
-      data={items}
-      keyExtractor={(item, index) => `${item.id}-${index}`}
-      renderItem={renderItem}
-      pagingEnabled
-      snapToInterval={SCREEN_HEIGHT}
-      decelerationRate="fast"
-      showsVerticalScrollIndicator={false}
-      onViewableItemsChanged={onViewableItemsChanged}
-      viewabilityConfig={viewabilityConfig.current}
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.5}
-      getItemLayout={(data, index) => ({
-        length: SCREEN_HEIGHT,
-        offset: SCREEN_HEIGHT * index,
-        index,
-      })}
-      // メモリ最適化設定
-      removeClippedSubviews={true}
-      windowSize={3}
-      maxToRenderPerBatch={2}
-      initialNumToRender={2}
-      updateCellsBatchingPeriod={50}
-      ListEmptyComponent={() => (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>⭐</Text>
-          <Text style={styles.emptyText}>No saved videos yet</Text>
-          <Text style={styles.emptySubtext}>Tap the Keep button on videos to save them for later review</Text>
+    <View style={styles.container}>
+      <FlatList
+        ref={flatListRef}
+        data={items}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
+        renderItem={renderItem}
+        pagingEnabled
+        snapToInterval={SCREEN_HEIGHT}
+        decelerationRate="fast"
+        showsVerticalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig.current}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        getItemLayout={(data, index) => ({
+          length: SCREEN_HEIGHT,
+          offset: SCREEN_HEIGHT * index,
+          index,
+        })}
+        // メモリ最適化設定
+        removeClippedSubviews={true}
+        windowSize={3}
+        maxToRenderPerBatch={2}
+        initialNumToRender={2}
+        updateCellsBatchingPeriod={50}
+        ListEmptyComponent={() => (
+          <View style={styles.empty}>
+            <Text style={styles.emptyIcon}>⭐</Text>
+            <Text style={styles.emptyText}>No saved videos yet</Text>
+            <Text style={styles.emptySubtext}>Tap the Keep button on videos to save them for later review</Text>
+          </View>
+        )}
+      />
+      {/* Backボタン */}
+      <Pressable
+        style={[styles.backButton, { top: insets.top + 10 }]}
+        onPress={() => router.back()}
+      >
+        <View style={styles.backButtonInner}>
+          <Text style={styles.backButtonIcon}>‹</Text>
         </View>
-      )}
-    />
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 10,
+  },
+  backButtonInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    // グロー効果
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  backButtonIcon: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: '300',
+    marginLeft: -2,
+    marginTop: -2,
+  },
   loading: {
     flex: 1,
     justifyContent: 'center',

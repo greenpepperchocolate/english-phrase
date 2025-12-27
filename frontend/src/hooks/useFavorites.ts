@@ -50,9 +50,16 @@ export function useFavorites() {
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: true,
     refetchOnMount: false,
-    retry: false,
+    retry: (failureCount, error) => {
+      if (failureCount >= 3) return false;
+      if (error && 'isNetworkError' in error && error.isNetworkError) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     retryOnMount: false,
     throwOnError: false,
     networkMode: 'offlineFirst',

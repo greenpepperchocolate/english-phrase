@@ -1,10 +1,24 @@
-﻿import { useEffect, useState } from 'react';
-import { Alert, Button, Pressable, SafeAreaView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import {
+  Alert,
+  Button,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserSettings } from '../src/hooks/useUserSettings';
 import { useAuth } from '../src/providers/AuthProvider';
 
-function ContactForm() {
+function ContactForm({ scrollToInput }: { scrollToInput: () => void }) {
   const { authorizedFetch } = useAuth();
   const [subject, setSubject] = useState<'bug_report' | 'feature_request' | 'other'>('bug_report');
   const [message, setMessage] = useState('');
@@ -17,6 +31,8 @@ function ContactForm() {
   ];
 
   const handleSubmit = async () => {
+    Keyboard.dismiss();
+
     if (!message.trim()) {
       Alert.alert('エラー', 'メッセージを入力してください。');
       return;
@@ -95,17 +111,23 @@ function ContactForm() {
         value={message}
         onChangeText={setMessage}
         multiline
-        numberOfLines={6}
+        numberOfLines={4}
         textAlignVertical="top"
         editable={!isSubmitting}
+        onFocus={scrollToInput}
       />
       <Text style={styles.characterCount}>{message.length} / 5000文字</Text>
 
-      <Button
-        title={isSubmitting ? '送信中...' : '送信'}
+      <Pressable
+        style={[
+          styles.submitButton,
+          (isSubmitting || !message.trim() || message.trim().length < 10) && styles.submitButtonDisabled,
+        ]}
         onPress={handleSubmit}
         disabled={isSubmitting || !message.trim() || message.trim().length < 10}
-      />
+      >
+        <Text style={styles.submitButtonText}>{isSubmitting ? '送信中...' : '送信'}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -117,6 +139,7 @@ export default function SettingsScreen() {
   const [showJapanese, setShowJapanese] = useState(true);
   const [repeatCount, setRepeatCount] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (settingsQuery.data) {
@@ -170,6 +193,13 @@ export default function SettingsScreen() {
     );
   };
 
+  const scrollToContactForm = () => {
+    // キーボードが表示された時にスクロールして入力欄を見えるようにする
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: 400, animated: true });
+    }, 300);
+  };
+
   if (settingsQuery.isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -197,82 +227,114 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {isGuest && (
-        <View style={styles.guestNotice}>
-          <Text style={styles.guestNoticeIcon}>🔒</Text>
-          <Text style={styles.guestNoticeTitle}>ゲストアカウント</Text>
-          <Text style={styles.guestNoticeText}>
-            ゲストアカウントでは設定が保存されません。アカウントを作成して設定を保存しましょう！
-          </Text>
-          <Pressable style={styles.signUpPromptButton} onPress={signOut}>
-            <Text style={styles.signUpPromptButtonText}>新規登録 / ログイン</Text>
-          </Pressable>
-        </View>
-      )}
-
-      <View style={[styles.card, isGuest && styles.cardDisabled]}>
-        <View style={styles.switchRow}>
-          <Text style={[styles.label, isGuest && styles.labelDisabled]}>日本語字幕を表示</Text>
-          <Switch value={showJapanese} onValueChange={setShowJapanese} disabled={isGuest} />
-        </View>
-        <Text style={[styles.label, isGuest && styles.labelDisabled]}>リピート回数（動画1本あたり）</Text>
-        <View style={styles.repeatCountContainer}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
-            <Pressable
-              key={count}
-              style={[styles.repeatButton, repeatCount === count && styles.repeatButtonActive, isGuest && styles.repeatButtonDisabled]}
-              onPress={() => !isGuest && setRepeatCount(count)}
-              disabled={isGuest}
-            >
-              <Text style={[styles.repeatButtonText, repeatCount === count && styles.repeatButtonTextActive, isGuest && styles.repeatButtonTextDisabled]}>
-                {count}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}
+        >
+          {isGuest && (
+            <View style={styles.guestNotice}>
+              <Text style={styles.guestNoticeIcon}>🔒</Text>
+              <Text style={styles.guestNoticeTitle}>ゲストアカウント</Text>
+              <Text style={styles.guestNoticeText}>
+                ゲストアカウントでは設定が保存されません。アカウントを作成して設定を保存しましょう！
               </Text>
-            </Pressable>
-          ))}
-        </View>
-        <Text style={[styles.hint, isGuest && styles.hintDisabled]}>
-          {repeatCount === 1 ? '1回 = 1回再生後に次の動画へ' : `${repeatCount}回 = ${repeatCount}回再生後に次の動画へ`}
-        </Text>
-        {!isGuest && <Button title="保存" onPress={handleSave} disabled={updateSettings.isPending} />}
-      </View>
-      {!isGuest && (
-        <View style={styles.card}>
-          <Text style={styles.label}>お問い合わせ</Text>
-          <ContactForm />
-        </View>
-      )}
-      <View style={styles.card}>
-        <Text style={styles.label}>法的情報</Text>
-        <Pressable
-          style={styles.linkButton}
-          onPress={() => router.push('/privacy-policy')}
-        >
-          <Text style={styles.linkButtonText}>プライバシーポリシー</Text>
-          <Text style={styles.linkButtonArrow}>›</Text>
-        </Pressable>
-        <Pressable
-          style={styles.linkButton}
-          onPress={() => router.push('/terms-of-service')}
-        >
-          <Text style={styles.linkButtonText}>利用規約</Text>
-          <Text style={styles.linkButtonArrow}>›</Text>
-        </Pressable>
-      </View>
-      <View style={styles.footer}>
-        <Text style={styles.info}>{isGuest ? 'ゲストアカウント' : 'ログイン中'}</Text>
-        {!isGuest && <Button title="ログアウト" onPress={signOut} />}
-        {!isGuest && (
-          <Pressable
-            style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
-            onPress={handleDeleteAccount}
-            disabled={isDeleting}
-          >
-            <Text style={styles.deleteButtonText}>
-              {isDeleting ? 'アカウント削除中...' : 'アカウントを削除'}
+              <Pressable style={styles.signUpPromptButton} onPress={signOut}>
+                <Text style={styles.signUpPromptButtonText}>新規登録 / ログイン</Text>
+              </Pressable>
+            </View>
+          )}
+
+          <View style={[styles.card, isGuest && styles.cardDisabled]}>
+            <View style={styles.switchRow}>
+              <Text style={[styles.label, isGuest && styles.labelDisabled]}>日本語字幕を表示</Text>
+              <Switch value={showJapanese} onValueChange={setShowJapanese} disabled={isGuest} />
+            </View>
+            <Text style={[styles.label, isGuest && styles.labelDisabled]}>リピート回数（動画1本あたり）</Text>
+            <View style={styles.repeatCountContainer}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+                <Pressable
+                  key={count}
+                  style={[styles.repeatButton, repeatCount === count && styles.repeatButtonActive, isGuest && styles.repeatButtonDisabled]}
+                  onPress={() => !isGuest && setRepeatCount(count)}
+                  disabled={isGuest}
+                >
+                  <Text style={[styles.repeatButtonText, repeatCount === count && styles.repeatButtonTextActive, isGuest && styles.repeatButtonTextDisabled]}>
+                    {count}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={[styles.hint, isGuest && styles.hintDisabled]}>
+              {repeatCount === 1 ? '1回 = 1回再生後に次の動画へ' : `${repeatCount}回 = ${repeatCount}回再生後に次の動画へ`}
             </Text>
-          </Pressable>
-        )}
-      </View>
+            {!isGuest && (
+              <Pressable
+                style={[styles.saveButton, updateSettings.isPending && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={updateSettings.isPending}
+              >
+                <Text style={styles.saveButtonText}>{updateSettings.isPending ? '保存中...' : '保存'}</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {!isGuest && (
+            <View style={styles.card}>
+              <Text style={styles.label}>お問い合わせ</Text>
+              <ContactForm scrollToInput={scrollToContactForm} />
+            </View>
+          )}
+
+          <View style={styles.card}>
+            <Text style={styles.label}>法的情報</Text>
+            <Pressable
+              style={styles.linkButton}
+              onPress={() => router.push('/privacy-policy')}
+            >
+              <Text style={styles.linkButtonText}>プライバシーポリシー</Text>
+              <Text style={styles.linkButtonArrow}>›</Text>
+            </Pressable>
+            <Pressable
+              style={styles.linkButton}
+              onPress={() => router.push('/terms-of-service')}
+            >
+              <Text style={styles.linkButtonText}>利用規約</Text>
+              <Text style={styles.linkButtonArrow}>›</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.info}>{isGuest ? 'ゲストアカウント' : 'ログイン中'}</Text>
+            {!isGuest && (
+              <Pressable style={styles.logoutButton} onPress={signOut}>
+                <Text style={styles.logoutButtonText}>ログアウト</Text>
+              </Pressable>
+            )}
+            {!isGuest && (
+              <Pressable
+                style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
+                onPress={handleDeleteAccount}
+                disabled={isDeleting}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {isDeleting ? 'アカウント削除中...' : 'アカウントを削除'}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* 下部に余白を追加してスクロール時にすべてのコンテンツが見えるようにする */}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -281,8 +343,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
     padding: 16,
-    rowGap: 16,
+    paddingBottom: 40,
   },
   card: {
     backgroundColor: '#ffffff',
@@ -293,6 +363,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 2,
+    marginBottom: 16,
   },
   label: {
     fontWeight: '600',
@@ -342,12 +413,13 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   footer: {
-    marginTop: 'auto',
     rowGap: 12,
+    marginTop: 8,
   },
   info: {
     textAlign: 'center',
     color: '#475569',
+    marginBottom: 8,
   },
   errorText: {
     fontSize: 14,
@@ -407,13 +479,40 @@ const styles = StyleSheet.create({
   hintDisabled: {
     color: '#cbd5e1',
   },
+  saveButton: {
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#93c5fd',
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  logoutButton: {
+    backgroundColor: '#64748b',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   deleteButton: {
     backgroundColor: '#ef4444',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 8,
   },
   deleteButtonDisabled: {
     backgroundColor: '#fca5a5',
@@ -493,8 +592,8 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 14,
     color: '#1b263b',
-    minHeight: 120,
-    maxHeight: 200,
+    minHeight: 100,
+    maxHeight: 150,
   },
   textAreaDisabled: {
     backgroundColor: '#f1f5f9',
@@ -505,5 +604,24 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'right',
     marginTop: -8,
+  },
+  submitButton: {
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#93c5fd',
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  bottomSpacer: {
+    height: 40,
   },
 });

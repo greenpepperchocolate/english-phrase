@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../src/providers/AuthProvider';
 import { AppQueryClientProvider, queryClient } from '../src/providers/QueryProvider';
@@ -9,6 +10,15 @@ import { AuthBoundary } from '../src/components/AuthBoundary';
 // 開発環境では依存関係の問題を避けるため無効化
 // 本番ビルドを作成する際は、app.config.jsでSentryプラグインを設定してください
 // 詳細: https://docs.sentry.io/platforms/react-native/
+
+function CustomBackButton() {
+  const router = useRouter();
+  return (
+    <Pressable style={styles.backButton} onPress={() => router.back()}>
+      <Text style={styles.backButtonIcon}>‹</Text>
+    </Pressable>
+  );
+}
 
 export default function RootLayout() {
   useEffect(() => {
@@ -21,7 +31,18 @@ export default function RootLayout() {
       <AppQueryClientProvider>
         <AuthBoundary>
           <StatusBar style="auto" />
-          <Stack>
+          <Stack
+            screenOptions={{
+              headerTitleStyle: {
+                fontWeight: '600',
+                fontSize: 17,
+              },
+              headerShadowVisible: false,
+              headerStyle: {
+                backgroundColor: '#f8fafc',
+              },
+            }}
+          >
             <Stack.Screen
               name="index"
               options={{
@@ -32,14 +53,7 @@ export default function RootLayout() {
             <Stack.Screen
               name="favorites"
               options={{
-                title: 'Keep',
-                headerStyle: {
-                  backgroundColor: '#1d4ed8',
-                },
-                headerTintColor: '#ffffff',
-                headerTitleStyle: {
-                  fontWeight: 'bold',
-                },
+                headerShown: false,
               }}
             />
             <Stack.Screen
@@ -48,7 +62,13 @@ export default function RootLayout() {
                 headerShown: false,
               }}
             />
-            <Stack.Screen name="settings" options={{ title: '設定' }} />
+            <Stack.Screen
+              name="settings"
+              options={{
+                title: '設定',
+                headerLeft: () => <CustomBackButton />,
+              }}
+            />
             <Stack.Screen
               name="verify-email"
               options={{
@@ -74,12 +94,14 @@ export default function RootLayout() {
               name="privacy-policy"
               options={{
                 title: 'プライバシーポリシー',
+                headerLeft: () => <CustomBackButton />,
               }}
             />
             <Stack.Screen
               name="terms-of-service"
               options={{
                 title: '利用規約',
+                headerLeft: () => <CustomBackButton />,
               }}
             />
           </Stack>
@@ -88,3 +110,22 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  backButtonIcon: {
+    color: '#1d4ed8',
+    fontSize: 28,
+    fontWeight: '400',
+    marginLeft: -2,
+    marginTop: -2,
+  },
+});

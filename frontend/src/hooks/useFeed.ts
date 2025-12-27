@@ -64,9 +64,19 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
     staleTime: 10 * 60 * 1000, // 10分間はキャッシュを新鮮とみなす（5分→10分に延長）
     gcTime: 30 * 60 * 1000, // 30分間キャッシュを保持（10分→30分に延長）
     refetchOnWindowFocus: false, // ウィンドウフォーカス時の自動refetchを無効化
-    refetchOnReconnect: false, // 再接続時の自動refetchを無効化
+    refetchOnReconnect: true, // 再接続時は自動refetch（ネットワーク復帰時）
     refetchOnMount: false, // マウント時の自動refetchを無効化
-    retry: false, // リトライを完全に無効化（エラー時は既存データを使用）
+    // ネットワークエラー時のみリトライ（サーバーエラーはリトライしない）
+    retry: (failureCount, error) => {
+      // 3回までリトライ
+      if (failureCount >= 3) return false;
+      // ネットワークエラー（status 0）の場合のみリトライ
+      if (error && 'isNetworkError' in error && error.isNetworkError) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 1s, 2s, 4s...最大10s
     retryOnMount: false, // マウント時のリトライを無効化
 
     // エラー時の動作を制御
