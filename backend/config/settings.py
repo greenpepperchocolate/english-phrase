@@ -20,7 +20,11 @@ load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "insecure-dev-secret")
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
