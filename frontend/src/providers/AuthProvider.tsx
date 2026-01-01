@@ -33,6 +33,7 @@ type AuthTokens = {
   refreshToken: string;
   anonymous: boolean;
   expiresAt: number;
+  userEmail?: string;
 };
 
 type LoginPayload = {
@@ -53,6 +54,7 @@ type SignUpResponse = {
 
 type AuthContextValue = {
   tokens: AuthTokens | null;
+  userEmail: string | null;
   isBootstrapping: boolean;
   isAuthenticated: boolean;
   signUp: (payload: SignUpPayload) => Promise<SignUpResponse>;
@@ -274,7 +276,7 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
           body: JSON.stringify({ email, password }),
         }
       );
-      const next = hydrateTokens(data);
+      const next = { ...hydrateTokens(data), userEmail: email };
       await persistTokens(next);
     },
     [persistTokens]
@@ -367,6 +369,7 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
   const value = useMemo(
     () => ({
       tokens,
+      userEmail: tokens?.userEmail ?? null,
       isBootstrapping,
       isAuthenticated: !!tokens,
       signUp,

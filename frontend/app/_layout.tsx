@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '../src/providers/AuthProvider';
 import { AppQueryClientProvider, queryClient } from '../src/providers/QueryProvider';
 import { AuthBoundary } from '../src/components/AuthBoundary';
@@ -27,11 +28,12 @@ export default function RootLayout() {
     }
   }, []);
   return (
-    <AuthProvider queryClient={queryClient}>
-      <AppQueryClientProvider>
-        <AuthBoundary>
-          <StatusBar style="auto" />
-          <Stack
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider queryClient={queryClient}>
+        <AppQueryClientProvider>
+          <AuthBoundary>
+            <StatusBar style="auto" />
+            <Stack
             screenOptions={{
               headerTitleStyle: {
                 fontWeight: '600',
@@ -47,6 +49,13 @@ export default function RootLayout() {
               name="index"
               options={{
                 headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="onboarding"
+              options={{
+                headerShown: false,
+                gestureEnabled: false,
               }}
             />
             <Stack.Screen name="phrase/[id]" options={{ title: '' }} />
@@ -104,10 +113,11 @@ export default function RootLayout() {
                 headerLeft: () => <CustomBackButton />,
               }}
             />
-          </Stack>
-        </AuthBoundary>
-      </AppQueryClientProvider>
-    </AuthProvider>
+            </Stack>
+          </AuthBoundary>
+        </AppQueryClientProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 

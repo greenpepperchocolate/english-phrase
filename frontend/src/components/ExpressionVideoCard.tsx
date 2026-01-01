@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { Expression } from '../api/types';
 
@@ -23,6 +24,7 @@ function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatus
 
 export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
   ({ expression, isActive, showJapanese, tabBarHeight = 0 }, ref) => {
+    const insets = useSafeAreaInsets();
     const videoRef = useRef<Video | null>(null);
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
@@ -122,7 +124,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
         )}
 
         {/* テキスト情報 */}
-        <View style={styles.textOverlay}>
+        <View style={[styles.textOverlay, { bottom: insets.bottom + 106 }]}>
           <Text style={styles.expressionText}>{expression.text}</Text>
           {showJapanese && <Text style={styles.meaningText}>{expression.meaning}</Text>}
         </View>

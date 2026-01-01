@@ -1,4 +1,4 @@
-import { PropsWithChildren, useState } from 'react';
+﻿import { PropsWithChildren, useState } from 'react';
 import { Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useAuth } from '../providers/AuthProvider';
@@ -82,13 +82,20 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
   const { signIn, signInAnonymously } = useAuth();
 
   const handleSignIn = async () => {
-    if (!email || !password) {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) {
       Alert.alert('エラー', 'メールアドレスとパスワードを入力してください。');
+      return;
+    }
+    // メール形式の簡易チェック
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      Alert.alert('エラー', '有効なメールアドレスを入力してください。');
       return;
     }
     setBusy(true);
     try {
-      await signIn({ email, password });
+      await signIn({ email: trimmedEmail, password });
     } catch (error: any) {
       console.error(error);
       if (error?.status === 403) {

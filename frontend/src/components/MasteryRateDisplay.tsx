@@ -3,6 +3,16 @@ import { useMasteryRate } from '../hooks/useMasteryRate';
 
 const CIRCLE_SIZE = 56;
 
+// マスター率に応じた色を返す
+function getRateColor(rate: number): string {
+  if (rate >= 100) return '#ffffff'; // 白
+  if (rate >= 90) return '#a855f7';  // 紫
+  if (rate >= 70) return '#22c55e';  // 緑
+  if (rate >= 50) return '#ef4444';  // 赤
+  if (rate >= 20) return '#eab308';  // 黄色
+  return '#3b82f6';                   // 青
+}
+
 export function MasteryRateDisplay() {
   const { data, isLoading, error } = useMasteryRate();
 
@@ -12,11 +22,12 @@ export function MasteryRateDisplay() {
   }
 
   const rate = data.mastery_rate;
+  const rateColor = getRateColor(rate);
 
   return (
     <View style={styles.container}>
       {/* 円形デザイン */}
-      <View style={styles.outerRing}>
+      <View style={[styles.outerRing, { borderColor: rateColor, shadowColor: rateColor }]}>
         <View style={styles.innerCircle}>
           <Text style={styles.rate}>{rate}</Text>
           <Text style={styles.percent}>%</Text>

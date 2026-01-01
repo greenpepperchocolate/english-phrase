@@ -26,6 +26,7 @@ export type PhraseSummary = {
   video_url: string | null;
   audio_url: string | null;
   scene_image_url: string | null;
+  is_favorite: boolean;
   is_mastered: boolean;
   expressions: PhraseExpression[];
 };

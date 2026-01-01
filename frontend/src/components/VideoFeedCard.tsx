@@ -365,7 +365,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
             )}
 
             <View style={styles.overlay}>
-              <View style={styles.buttonGroup}>
+              <View style={[styles.buttonGroup, { bottom: insets.bottom + 46 }]}>
                 <View style={styles.masteredButtonContainer}>
                   <Pressable
                     onPress={handleMasteredPress}
@@ -912,7 +912,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
               </View>
             </View>
 
-            <View style={styles.textOverlay}>
+            <View style={[styles.textOverlay, { bottom: insets.bottom + 106 }]}>
               <Text style={styles.phraseText}>{phrase.text}</Text>
               {showJapanese && <Text style={styles.meaningText}>{phrase.meaning}</Text>}
             </View>

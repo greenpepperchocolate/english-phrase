@@ -135,7 +135,7 @@ function ContactForm({ scrollToInput }: { scrollToInput: () => void }) {
 export default function SettingsScreen() {
   const router = useRouter();
   const { settingsQuery, updateSettings } = useUserSettings();
-  const { signOut, deleteAccount, tokens } = useAuth();
+  const { signOut, deleteAccount, tokens, userEmail } = useAuth();
   const [showJapanese, setShowJapanese] = useState(true);
   const [repeatCount, setRepeatCount] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -312,7 +312,7 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.info}>{isGuest ? 'ゲストアカウント' : 'ログイン中'}</Text>
+            <Text style={styles.info}>{isGuest ? 'ゲストアカウント' : userEmail || 'ログイン中'}</Text>
             {!isGuest && (
               <Pressable style={styles.logoutButton} onPress={signOut}>
                 <Text style={styles.logoutButtonText}>ログアウト</Text>
