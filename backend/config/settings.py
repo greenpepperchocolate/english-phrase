@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -69,19 +70,17 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DEFAULT_DB_URL = f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+# PostgreSQL設定（Render）- DATABASE_URLは必須
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required. Set it in .env file.")
+
 DATABASES = {
     "default": dj_database_url.parse(
-        os.environ.get("DATABASE_URL", DEFAULT_DB_URL),
-        conn_max_age=0,  # SQLiteではコネクションプーリングを無効化
+        DATABASE_URL,
+        conn_max_age=600,  # PostgreSQLコネクションプーリング（10分）
     )
 }
-
-# SQLite用の追加設定
-if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
-    DATABASES['default']['OPTIONS'] = {
-        'timeout': 20,  # ロック待機時間を20秒に設定
-    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

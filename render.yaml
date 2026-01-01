@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: english-phrase-api
+    runtime: python
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: english-app-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: "3.10.12"
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: R2_ACCESS_KEY
+        sync: false
+      - key: R2_SECRET_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        value: english-phrase-media
+      - key: R2_PUBLIC_BASE_URL
+        sync: false
+      - key: R2_SIGNING_ENDPOINT
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        value: noreply@eitango.club
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
