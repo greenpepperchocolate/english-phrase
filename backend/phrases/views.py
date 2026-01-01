@@ -42,15 +42,15 @@ class PhraseFeedView(generics.ListAPIView):
         if search:
             qs = qs.filter(Q(text__icontains=search) | Q(meaning__icontains=search))
 
-        from django.db.models import F
-        from django.db.models.functions import Mod, Cast
+        from django.db.models import F, Value
+        from django.db.models.functions import Mod
         from django.db.models import IntegerField
 
         # Get random seed from query params (generated per session by frontend)
         seed_param = self.request.query_params.get('seed')
         if seed_param:
             try:
-                seed = int(seed_param)
+                seed = int(seed_param) % 10000  # Keep seed small to avoid overflow
             except (ValueError, TypeError):
                 seed = 1  # Default seed if invalid
         else:
@@ -69,19 +69,13 @@ class PhraseFeedView(generics.ListAPIView):
             # Prioritize non-mastered phrases, then pseudo-random based on session seed
             # This ensures consistent ordering across pagination for the same session
             qs = qs.annotate(
-                random_order=Mod(
-                    Cast(F('id') * (seed * 2654435761), IntegerField()),
-                    1000000
-                )
+                random_order=Mod(F('id') * seed, Value(1000000))
             )
             return qs.order_by('is_mastered_by_user', 'random_order')
         else:
             # For anonymous users, pseudo-random based on session seed
             qs = qs.annotate(
-                random_order=Mod(
-                    Cast(F('id') * (seed * 2654435761), IntegerField()),
-                    1000000
-                )
+                random_order=Mod(F('id') * seed, Value(1000000))
             )
             return qs.order_by('random_order')
 
@@ -343,14 +337,14 @@ class FavoritesListView(generics.ListAPIView):
     pagination_class = FeedPagination
 
     def get_queryset(self):
-        from django.db.models import Exists, OuterRef, F, IntegerField
-        from django.db.models.functions import Mod, Cast
+        from django.db.models import Exists, OuterRef, F, Value
+        from django.db.models.functions import Mod
 
         # Get random seed from query params
         seed_param = self.request.query_params.get('seed')
         if seed_param:
             try:
-                seed = int(seed_param)
+                seed = int(seed_param) % 10000  # Keep seed small to avoid overflow
             except (ValueError, TypeError):
                 seed = 1
         else:
@@ -379,10 +373,7 @@ class FavoritesListView(generics.ListAPIView):
             .prefetch_related("phraseexpression_set__expression")
             .annotate(
                 is_mastered_by_user=Exists(mastered_subquery),
-                random_order=Mod(
-                    Cast(F('id') * (seed * 2654435761), IntegerField()),
-                    1000000
-                )
+                random_order=Mod(F('id') * seed, Value(1000000))
             )
             .order_by('is_mastered_by_user', 'random_order')
         )
