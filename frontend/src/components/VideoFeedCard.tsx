@@ -951,13 +951,13 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
               }
             }}
           >
-            <Pressable style={[styles.tabItem, horizontalIndex === 0 ? styles.tabItemActive : styles.tabItemInactive]} onPress={() => handleTabPress(0)}>
+            <Pressable style={styles.tabItem} onPress={() => handleTabPress(0)}>
               <Text style={[styles.tabText, horizontalIndex === 0 && styles.tabTextActive]}>
                 Word
               </Text>
               {horizontalIndex === 0 && <View style={styles.tabUnderline} />}
             </Pressable>
-            <Pressable style={[styles.tabItem, horizontalIndex > 0 ? styles.tabItemActive : styles.tabItemInactive]} onPress={() => handleTabPress(1)}>
+            <Pressable style={styles.tabItem} onPress={() => handleTabPress(1)}>
               <Text style={[styles.tabText, horizontalIndex > 0 && styles.tabTextActive]}>
                 Phrase
               </Text>
@@ -1227,16 +1227,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     zIndex: 10,
   },
-  tabItem: {},
-  tabItemActive: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    marginHorizontal: 4,
-  },
-  tabItemInactive: {
-    backgroundColor: '#0d0d0d',
-    borderRadius: 8,
-    marginHorizontal: 4,
+  tabItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    alignItems: 'center',
   },
   tabText: {
     fontSize: 16,
