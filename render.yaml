@@ -1,11 +1,11 @@
 services:
   - type: web
     name: english-phrase-api
-    runtime: python
+    runtime: docker
     region: oregon
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    dockerCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    preDeployCommand: python manage.py migrate
     envVars:
       - key: DJANGO_SECRET_KEY
         generateValue: true
@@ -15,8 +15,6 @@ services:
         fromDatabase:
           name: english-app-db
           property: connectionString
-      - key: PYTHON_VERSION
-        value: "3.10.12"
       - key: SENDGRID_API_KEY
         sync: false
       - key: R2_ACCESS_KEY

@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.env
+.env.*
+*.sqlite3
+db.sqlite3
+.git
+.gitignore
+data_export/
+media/
+*.log
+.DS_Store
+Thumbs.db

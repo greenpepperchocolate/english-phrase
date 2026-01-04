@@ -14,8 +14,13 @@ export function useOnboarding() {
 
   const checkOnboardingStatus = async () => {
     try {
-      const value = await AsyncStorage.getItem(ONBOARDING_KEY);
-      setHasOnboarded(value === 'true');
+      // ローカル環境（開発モード）では毎回オンボーディングを表示
+      if (__DEV__) {
+        setHasOnboarded(false);
+      } else {
+        const value = await AsyncStorage.getItem(ONBOARDING_KEY);
+        setHasOnboarded(value === 'true');
+      }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
       setHasOnboarded(false);
