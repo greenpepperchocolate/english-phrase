@@ -68,8 +68,8 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     // メモリ管理: 10000回スワイプ対応
-    // maxPagesを設定してメモリ使用量を制限（古いページは自動的に破棄）
-    maxPages: 50, // 最大50ページ（500件）をメモリに保持
+    // maxPagesは設定しない（設定すると古いページが削除されてインデックスがずれる）
+    // 代わりにFlatListのremoveClippedSubviewsとwindowSizeでメモリを管理
 
     // React Query設定: 10000回スワイプでもエラーが出ないように最適化
     staleTime: 5 * 60 * 1000, // 5分間はキャッシュを新鮮とみなす

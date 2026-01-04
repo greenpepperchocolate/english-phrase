@@ -96,6 +96,7 @@ class PhraseFeedSerializer(serializers.ModelSerializer):
     audio_url = serializers.SerializerMethodField()
     scene_image_url = serializers.SerializerMethodField()
     is_mastered = serializers.SerializerMethodField()
+    is_favorite = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Phrase
@@ -110,6 +111,7 @@ class PhraseFeedSerializer(serializers.ModelSerializer):
             "audio_url",
             "scene_image_url",
             "is_mastered",
+            "is_favorite",
             "expressions",
         ]
 
@@ -132,6 +134,10 @@ class PhraseFeedSerializer(serializers.ModelSerializer):
         return services.build_media_url(obj.scene_image_key, sign=False)
 
     def get_is_mastered(self, obj: models.Phrase) -> bool:
+        # ViewでアノテーションされたフラグをN+1クエリなしで使用
+        if hasattr(obj, 'is_mastered_by_user'):
+            return obj.is_mastered_by_user
+        # アノテーションがない場合（後方互換性）
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return False
@@ -141,6 +147,21 @@ class PhraseFeedSerializer(serializers.ModelSerializer):
             expression=None,
         ).first()
         return progress.is_mastered if progress else False
+
+    def get_is_favorite(self, obj: models.Phrase) -> bool:
+        # ViewでアノテーションされたフラグをN+1クエリなしで使用
+        if hasattr(obj, 'is_favorite_by_user'):
+            return obj.is_favorite_by_user
+        # アノテーションがない場合（後方互換性）
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        progress = models.UserProgress.objects.filter(
+            user=request.user,
+            phrase=obj,
+            expression=None,
+        ).first()
+        return progress.is_favorite if progress else False
 
 
 class SettingsSerializer(serializers.ModelSerializer):

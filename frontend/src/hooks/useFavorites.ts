@@ -64,7 +64,7 @@ export function useFavorites() {
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     initialPageParam: 1,
     // メモリ管理: 10000回スワイプ対応
-    maxPages: 50, // 最大50ページをメモリに保持
+    // maxPagesは設定しない（インデックスずれ防止）
 
     // React Query設定: 10000回スワイプでもエラーが出ないように最適化
     staleTime: 5 * 60 * 1000,

@@ -44,7 +44,6 @@ class PhraseFeedView(generics.ListAPIView):
 
         from django.db.models import F, Value
         from django.db.models.functions import Mod
-        from django.db.models import IntegerField
 
         # Get random seed from query params (generated per session by frontend)
         seed_param = self.request.query_params.get('seed')
@@ -56,15 +55,21 @@ class PhraseFeedView(generics.ListAPIView):
         else:
             seed = 1  # Default seed if not provided
 
-        # If user is authenticated, annotate is_mastered for filtering
+        # If user is authenticated, annotate is_mastered and is_favorite for N+1 query prevention
         if self.request.user.is_authenticated:
             mastered_subquery = models.UserProgress.objects.filter(
                 user=self.request.user,
                 phrase=OuterRef('pk'),
                 is_mastered=True
             )
+            favorite_subquery = models.UserProgress.objects.filter(
+                user=self.request.user,
+                phrase=OuterRef('pk'),
+                is_favorite=True
+            )
             qs = qs.annotate(
-                is_mastered_by_user=Exists(mastered_subquery)
+                is_mastered_by_user=Exists(mastered_subquery),
+                is_favorite_by_user=Exists(favorite_subquery)
             )
             # Prioritize non-mastered phrases, then pseudo-random based on session seed
             # This ensures consistent ordering across pagination for the same session
@@ -360,11 +365,16 @@ class FavoritesListView(generics.ListAPIView):
             .values_list("phrase_id", flat=True)
         )
 
-        # Annotate is_mastered status
+        # Annotate is_mastered and is_favorite status for N+1 query prevention
         mastered_subquery = models.UserProgress.objects.filter(
             user=self.request.user,
             phrase=OuterRef('pk'),
             is_mastered=True
+        )
+        favorite_subquery = models.UserProgress.objects.filter(
+            user=self.request.user,
+            phrase=OuterRef('pk'),
+            is_favorite=True
         )
 
         # Pseudo-random ordering based on session seed for consistent pagination
@@ -373,6 +383,7 @@ class FavoritesListView(generics.ListAPIView):
             .prefetch_related("phraseexpression_set__expression")
             .annotate(
                 is_mastered_by_user=Exists(mastered_subquery),
+                is_favorite_by_user=Exists(favorite_subquery),
                 random_order=Mod(F('id') * seed, Value(1000000))
             )
             .order_by('is_mastered_by_user', 'random_order')

@@ -60,6 +60,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const [shouldPlayVideo, setShouldPlayVideo] = useState(true);
     const [tabBarHeight, setTabBarHeight] = useState(0);
     const horizontalIndexRef = useRef(0); // 安定したコールバック用
+    const autoSwipeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 自動スワイプタイマー
 
     // キラキラエフェクト用のアニメーション値
     const sparkleAnim1 = useRef(new Animated.Value(0)).current;
@@ -173,6 +174,11 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
     // phrase idが変わった時に横スワイプとカウントをリセット
     useEffect(() => {
+      // 自動スワイプタイマーをクリア（ゾンビタイマー防止）
+      if (autoSwipeTimerRef.current) {
+        clearTimeout(autoSwipeTimerRef.current);
+        autoSwipeTimerRef.current = null;
+      }
       setHorizontalIndex(0);
       playCountRef.current = 0;
       setShouldPlayVideo(true);
@@ -190,6 +196,11 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
         videoRef.current?.pauseAsync();
         // すべてのExpression動画も停止
         expressionVideoRefs.current.forEach(ref => ref.pause());
+        // 自動スワイプタイマーもクリア
+        if (autoSwipeTimerRef.current) {
+          clearTimeout(autoSwipeTimerRef.current);
+          autoSwipeTimerRef.current = null;
+        }
       }
     }, [isActive]);
 
@@ -237,21 +248,27 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       playCountRef.current += 1;
       const currentPlayCount = playCountRef.current;
 
-      // PlaybackLogを記録
-      if (!playbackLogger.isPending) {
-        playbackLogger.mutate({
-          phrase_id: phrase.id,
-          play_ms: status.positionMillis ?? 0,
-          completed: true,
-          source: 'feed',
-        });
-      }
-
       // 指定回数に達したら自動スワイプ
       if (currentPlayCount >= repeatCount) {
+        // PlaybackLogを記録（カード完了時のみ送信 - API負荷軽減）
+        if (!playbackLogger.isPending) {
+          playbackLogger.mutate({
+            phrase_id: phrase.id,
+            play_ms: status.positionMillis ?? 0,
+            completed: true,
+            source: 'feed',
+          });
+        }
+
         setShouldPlayVideo(false);
         if (onAutoSwipe) {
-          setTimeout(() => {
+          // 既存のタイマーをクリア（ゾンビタイマー防止）
+          if (autoSwipeTimerRef.current) {
+            clearTimeout(autoSwipeTimerRef.current);
+          }
+          // 新しいタイマーをセット
+          autoSwipeTimerRef.current = setTimeout(() => {
+            autoSwipeTimerRef.current = null;
             onAutoSwipe();
           }, 500); // 少し遅延させて自然な動きに
         }
