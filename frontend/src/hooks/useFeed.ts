@@ -27,13 +27,17 @@ function extractPageNumber(next: string | null): number | undefined {
   }
 }
 
+// スライディングウィンドウ設定
+const MAX_PAGES = 10; // 10ページ（100アイテム）をメモリに保持
+
 export function useFeed(params: { topic?: string; difficulty?: string; pageSize?: number }) {
   const { authorizedFetch } = useAuth();
+  const pageSize = params.pageSize || 20;
 
   // セッション内で一貫したランダムシードを使用（キャッシュの安定性を確保）
   const randomSeed = useMemo(() => getSessionFeedSeed(), []);
 
-  return useInfiniteQuery<CursorPaginatedResponse<PhraseSummary>, Error>({
+  const query = useInfiniteQuery<CursorPaginatedResponse<PhraseSummary>, Error>({
     queryKey: ['feed', params.topic, params.difficulty, params.pageSize, randomSeed],
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
@@ -52,8 +56,8 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
       }
       // ランダムシードを追加
       search.set('seed', String(randomSeed));
-      const query = search.toString();
-      const path = query ? `/feed?${query}` : '/feed';
+      const queryStr = search.toString();
+      const path = queryStr ? `/feed?${queryStr}` : '/feed';
 
       try {
         return await authorizedFetch<CursorPaginatedResponse<PhraseSummary>>(path);
@@ -67,9 +71,10 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
       }
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
-    // メモリ管理: 10000回スワイプ対応
-    // maxPagesは設定しない（設定すると古いページが削除されてインデックスがずれる）
-    // 代わりにFlatListのremoveClippedSubviewsとwindowSizeでメモリを管理
+
+    // メモリ管理: スライディングウィンドウ方式
+    // 10ページ（100アイテム）を保持し、古いページは自動的に破棄
+    maxPages: MAX_PAGES,
 
     // React Query設定: 10000回スワイプでもエラーが出ないように最適化
     staleTime: 5 * 60 * 1000, // 5分間はキャッシュを新鮮とみなす
@@ -98,4 +103,17 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
     // ネットワークモード: 常にキャッシュを優先
     networkMode: 'offlineFirst', // オフラインでもキャッシュから返す
   });
+
+  // 破棄されたアイテム数を計算（FlatListのインデックス調整用）
+  const itemOffset = useMemo(() => {
+    if (!query.data?.pageParams || query.data.pageParams.length === 0) return 0;
+    const firstPageNum = query.data.pageParams[0] as number;
+    // 最初のページが1なら破棄なし、5なら (5-1) * pageSize アイテムが破棄済み
+    return (firstPageNum - 1) * pageSize;
+  }, [query.data?.pageParams, pageSize]);
+
+  return {
+    ...query,
+    itemOffset, // 破棄されたアイテム数をFeedListに提供
+  };
 }

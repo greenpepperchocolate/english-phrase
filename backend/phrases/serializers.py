@@ -234,13 +234,70 @@ class MasteredToggleSerializer(serializers.Serializer):
     on = serializers.BooleanField(default=True)
 
 
-class MediaSignedUrlSerializer(serializers.Serializer):
-    key = serializers.CharField()
+class PhraseMediaSignedUrlSerializer(serializers.Serializer):
+    """
+    フレーズIDからそのフレーズのメディア署名付きURLを生成する。
+    クライアントからkeyを受け取らないため、任意ファイルへのアクセスを防止。
+    """
+    phrase_id = serializers.PrimaryKeyRelatedField(
+        queryset=models.Phrase.objects.all(),
+        source="phrase"
+    )
+    media_type = serializers.ChoiceField(
+        choices=["video", "audio"],
+        default="video"
+    )
 
     def create(self, validated_data):
-        key = validated_data["key"]
+        phrase = validated_data["phrase"]
+        media_type = validated_data.get("media_type", "video")
         ttl_value = self.context.get("ttl")
         ttl = int(ttl_value) if ttl_value is not None else settings.R2_SIGNED_URL_TTL
+
+        # サーバ側でDBからkeyを取得（クライアントからは受け取らない）
+        if media_type == "video":
+            key = phrase.video_key
+        else:
+            key = phrase.audio_key
+
+        if not key:
+            return {"url": None, "expires_in": 0}
+
+        url = services.build_media_url(key, sign=True, ttl=ttl)
+        return {"url": url, "expires_in": ttl}
+
+
+class ExpressionMediaSignedUrlSerializer(serializers.Serializer):
+    """
+    表現IDからその表現のメディア署名付きURLを生成する。
+    クライアントからkeyを受け取らないため、任意ファイルへのアクセスを防止。
+    """
+    expression_id = serializers.PrimaryKeyRelatedField(
+        queryset=models.Expression.objects.all(),
+        source="expression"
+    )
+    media_type = serializers.ChoiceField(
+        choices=["video", "audio", "image"],
+        default="video"
+    )
+
+    def create(self, validated_data):
+        expression = validated_data["expression"]
+        media_type = validated_data.get("media_type", "video")
+        ttl_value = self.context.get("ttl")
+        ttl = int(ttl_value) if ttl_value is not None else settings.R2_SIGNED_URL_TTL
+
+        # サーバ側でDBからkeyを取得（クライアントからは受け取らない）
+        if media_type == "video":
+            key = expression.video_key
+        elif media_type == "audio":
+            key = expression.audio_key
+        else:
+            key = expression.image_key
+
+        if not key:
+            return {"url": None, "expires_in": 0}
+
         url = services.build_media_url(key, sign=True, ttl=ttl)
         return {"url": url, "expires_in": ttl}
 

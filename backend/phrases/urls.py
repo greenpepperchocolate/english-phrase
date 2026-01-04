@@ -12,7 +12,9 @@ urlpatterns = [
     path("mastery-rate", views.MasteryRateView.as_view(), name="mastery-rate"),
     path("logs/play", views.PlaybackLogCreateView.as_view(), name="logs-play"),
     path("settings", views.UserSettingsView.as_view(), name="user-settings"),
-    path("media/signed-url", views.MediaSignedUrlView.as_view(), name="media-signed-url"),
+    # セキュリティ修正: 任意keyではなくリソースIDベースで署名URL生成
+    path("media/phrase/signed-url", views.PhraseMediaSignedUrlView.as_view(), name="phrase-media-signed-url"),
+    path("media/expression/signed-url", views.ExpressionMediaSignedUrlView.as_view(), name="expression-media-signed-url"),
     path("auth/signup", views.AuthSignUpView.as_view(), name="auth-signup"),
     path("auth/verify-email", views.EmailVerifyView.as_view(), name="auth-verify-email"),
     path("auth/login", views.AuthLoginView.as_view(), name="auth-login"),

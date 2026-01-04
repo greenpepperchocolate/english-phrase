@@ -325,12 +325,39 @@ class DeleteAccountView(APIView):
         )
 
 
-class MediaSignedUrlView(APIView):
+class PhraseMediaSignedUrlView(APIView):
+    """
+    フレーズIDを受け取り、そのフレーズのメディア署名付きURLを返す。
+    セキュリティ: クライアントから任意のkeyを受け取らず、
+    サーバ側でDBからkeyを取得するため、他ユーザーのメディアへのアクセスを防止。
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         ttl = request.data.get("ttl")
-        serializer = serializers.MediaSignedUrlSerializer(data=request.data, context={"ttl": ttl})
+        serializer = serializers.PhraseMediaSignedUrlSerializer(
+            data=request.data,
+            context={"ttl": ttl}
+        )
+        serializer.is_valid(raise_exception=True)
+        body = serializer.save()
+        return Response(body)
+
+
+class ExpressionMediaSignedUrlView(APIView):
+    """
+    表現IDを受け取り、その表現のメディア署名付きURLを返す。
+    セキュリティ: クライアントから任意のkeyを受け取らず、
+    サーバ側でDBからkeyを取得するため、他ユーザーのメディアへのアクセスを防止。
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        ttl = request.data.get("ttl")
+        serializer = serializers.ExpressionMediaSignedUrlSerializer(
+            data=request.data,
+            context={"ttl": ttl}
+        )
         serializer.is_valid(raise_exception=True)
         body = serializer.save()
         return Response(body)

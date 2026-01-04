@@ -3,6 +3,10 @@ import { useAuth } from '../providers/AuthProvider';
 import { PhraseSummary } from '../api/types';
 import { useMemo } from 'react';
 
+// スライディングウィンドウ設定
+const MAX_PAGES = 10; // 10ページ（200アイテム）をメモリに保持
+const PAGE_SIZE = 20;
+
 // セッション内でランダムシードを永続化
 let sessionFavoritesSeed: number | null = null;
 
@@ -39,10 +43,10 @@ export function useFavorites() {
   // セッション内で一貫したランダムシードを使用
   const randomSeed = useMemo(() => getSessionFavoritesSeed(), []);
 
-  return useInfiniteQuery<FavoritesResponse, Error>({
+  const query = useInfiniteQuery<FavoritesResponse, Error>({
     queryKey: ['favorites', randomSeed],
     queryFn: async ({ pageParam }) => {
-      const search = new URLSearchParams({ limit: '20' });
+      const search = new URLSearchParams({ limit: String(PAGE_SIZE) });
       if (pageParam && pageParam !== 1) {
         search.set('page', String(pageParam));
       }
@@ -63,8 +67,9 @@ export function useFavorites() {
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     initialPageParam: 1,
-    // メモリ管理: 10000回スワイプ対応
-    // maxPagesは設定しない（インデックスずれ防止）
+
+    // メモリ管理: スライディングウィンドウ方式
+    maxPages: MAX_PAGES,
 
     // React Query設定: 10000回スワイプでもエラーが出ないように最適化
     staleTime: 5 * 60 * 1000,
@@ -87,4 +92,16 @@ export function useFavorites() {
     throwOnError: false,
     networkMode: 'offlineFirst',
   });
+
+  // 破棄されたアイテム数を計算
+  const itemOffset = useMemo(() => {
+    if (!query.data?.pageParams || query.data.pageParams.length === 0) return 0;
+    const firstPageNum = query.data.pageParams[0] as number;
+    return (firstPageNum - 1) * PAGE_SIZE;
+  }, [query.data?.pageParams]);
+
+  return {
+    ...query,
+    itemOffset,
+  };
 }

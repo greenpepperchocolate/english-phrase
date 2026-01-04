@@ -3,6 +3,9 @@ import { useMemo } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { PhraseSummary } from '../api/types';
 
+// スライディングウィンドウ設定
+const MAX_PAGES = 10; // 10ページをメモリに保持
+
 // セッション内でランダムシードを永続化
 let sessionSearchSeed: number | null = null;
 
@@ -44,7 +47,7 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
   // セッション内で一貫したランダムシードを使用
   const randomSeed = useMemo(() => getSessionSearchSeed(), []);
 
-  return useInfiniteQuery<SearchResponse, Error>({
+  const infiniteQuery = useInfiniteQuery<SearchResponse, Error>({
     queryKey: ['search', query, randomSeed],
     queryFn: async ({ pageParam }) => {
       const search = new URLSearchParams({
@@ -71,8 +74,9 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     initialPageParam: 1,
     enabled: query.length > 0, // 検索クエリがある場合のみ実行
-    // メモリ管理: 10000回スワイプ対応
-    // maxPagesは設定しない（インデックスずれ防止）
+
+    // メモリ管理: スライディングウィンドウ方式
+    maxPages: MAX_PAGES,
 
     // React Query設定: 10000回スワイプでもエラーが出ないように最適化
     staleTime: 5 * 60 * 1000,
@@ -95,4 +99,16 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
     throwOnError: false,
     networkMode: 'offlineFirst',
   });
+
+  // 破棄されたアイテム数を計算
+  const itemOffset = useMemo(() => {
+    if (!infiniteQuery.data?.pageParams || infiniteQuery.data.pageParams.length === 0) return 0;
+    const firstPageNum = infiniteQuery.data.pageParams[0] as number;
+    return (firstPageNum - 1) * pageSize;
+  }, [infiniteQuery.data?.pageParams, pageSize]);
+
+  return {
+    ...infiniteQuery,
+    itemOffset,
+  };
 }

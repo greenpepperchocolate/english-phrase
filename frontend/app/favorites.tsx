@@ -1,5 +1,5 @@
-﻿import { useMemo, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, Pressable, StyleSheet, Text, View, ViewToken } from 'react-native';
+﻿import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import { ActivityIndicator, Dimensions, FlatList, Pressable, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/providers/AuthProvider';
@@ -9,6 +9,11 @@ import { useMasteredToggle } from '../src/hooks/useMasteredToggle';
 import { PhraseSummary } from '../src/api/types';
 import { VideoFeedCard, VideoFeedCardRef } from '../src/components/VideoFeedCard';
 import { ErrorFallback } from '../src/components/ErrorFallback';
+
+// FlatListの外で定義して安定性を確保
+const VIEWABILITY_CONFIG: ViewabilityConfig = {
+  itemVisiblePercentThreshold: 80,
+};
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -22,6 +27,15 @@ export default function FavoritesScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFocused, setIsFocused] = useState(true);
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
+  const activeIndexRef = useRef(0);
+
+  // スライディングウィンドウ対応: 現在のアイテムIDを追跡
+  const currentItemIdRef = useRef<string | null>(null);
+  const prevItemOffsetRef = useRef(0);
+
+  // 安定したコールバック用のref
+  const favoritesRef = useRef(favorites);
+  const itemsLengthRef = useRef(0);
 
   // 画面がフォーカスされているかを検出
   useFocusEffect(
@@ -33,39 +47,79 @@ export default function FavoritesScreen() {
     }, [])
   );
 
+  // favoritesRefを同期
+  useEffect(() => {
+    favoritesRef.current = favorites;
+  }, [favorites]);
+
+  // activeIndexRefを同期
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
   const items = useMemo(() => favorites.data?.pages.flatMap((page) => page.results) ?? [], [favorites.data]);
 
+  // itemsの長さを同期
+  useEffect(() => {
+    itemsLengthRef.current = items.length;
+  }, [items.length]);
+
+  // 現在のアイテムIDを追跡（スライディングウィンドウでページ破棄時のインデックス調整用）
+  useEffect(() => {
+    if (items[activeIndex]) {
+      currentItemIdRef.current = String(items[activeIndex].id);
+    }
+  }, [activeIndex, items]);
+
+  // ページ破棄時のインデックス調整
+  useEffect(() => {
+    const currentOffset = favorites.itemOffset;
+    const prevOffset = prevItemOffsetRef.current;
+
+    // オフセットが増加した = 古いページが破棄された
+    if (currentOffset > prevOffset && currentItemIdRef.current) {
+      const newIndex = items.findIndex(item => String(item.id) === currentItemIdRef.current);
+      if (newIndex !== -1 && newIndex !== activeIndex) {
+        console.log(`[FavoritesScreen] Page dropped, adjusting index: ${activeIndex} -> ${newIndex}`);
+        setActiveIndex(newIndex);
+        activeIndexRef.current = newIndex;
+      }
+    }
+
+    prevItemOffsetRef.current = currentOffset;
+  }, [favorites.itemOffset, items, activeIndex]);
+
+  // 安定したコールバック（依存配列を空にして再生成を防止）
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0) {
         const index = viewableItems[0].index;
-        if (index !== null && index !== activeIndex) {
+        if (index !== null && index !== activeIndexRef.current) {
           setActiveIndex(index);
         }
       }
     },
-    [activeIndex]
+    []
   );
-
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 80,
-  });
 
   const flatListRef = useRef<FlatList>(null);
 
-  const handleEndReached = () => {
-    if (favorites.hasNextPage && !favorites.isFetchingNextPage) {
-      favorites.fetchNextPage();
+  const handleEndReached = useCallback(() => {
+    if (favoritesRef.current.hasNextPage && !favoritesRef.current.isFetchingNextPage) {
+      favoritesRef.current.fetchNextPage();
     }
-  };
+  }, []);
 
   const handleAutoSwipe = useCallback(() => {
-    const nextIndex = activeIndex + 1;
-    if (nextIndex < items.length) {
+    const nextIndex = activeIndexRef.current + 1;
+    if (nextIndex < itemsLengthRef.current) {
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-      setActiveIndex(nextIndex);
     }
-  }, [activeIndex, items.length]);
+    // 残り3件でプリフェッチ
+    if (nextIndex >= itemsLengthRef.current - 3 && favoritesRef.current.hasNextPage && !favoritesRef.current.isFetchingNextPage) {
+      favoritesRef.current.fetchNextPage();
+    }
+  }, []);
 
   const renderItem = ({ item, index }: { item: PhraseSummary; index: number }) => (
     <VideoFeedCard
@@ -112,7 +166,7 @@ export default function FavoritesScreen() {
         decelerationRate="fast"
         showsVerticalScrollIndicator={false}
         onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig.current}
+        viewabilityConfig={VIEWABILITY_CONFIG}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         getItemLayout={(data, index) => ({

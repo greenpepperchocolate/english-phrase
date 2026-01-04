@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   ViewToken,
   Pressable,
+  ViewabilityConfig,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +23,11 @@ import { ErrorFallback } from '../src/components/ErrorFallback';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// FlatListの外で定義して安定性を確保
+const VIEWABILITY_CONFIG: ViewabilityConfig = {
+  itemVisiblePercentThreshold: 80,
+};
+
 export default function SearchScreen() {
   const router = useRouter();
   const { tokens } = useAuth();
@@ -34,6 +40,15 @@ export default function SearchScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFocused, setIsFocused] = useState(true);
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
+  const activeIndexRef = useRef(0);
+
+  // スライディングウィンドウ対応: 現在のアイテムIDを追跡
+  const currentItemIdRef = useRef<string | null>(null);
+  const prevItemOffsetRef = useRef(0);
+
+  // 安定したコールバック用のref
+  const searchRef = useRef(search);
+  const itemsLengthRef = useRef(0);
 
   // 画面がフォーカスされているかを検出
   useFocusEffect(
@@ -45,41 +60,79 @@ export default function SearchScreen() {
     }, [])
   );
 
+  // searchRefを同期
+  useEffect(() => {
+    searchRef.current = search;
+  }, [search]);
+
+  // activeIndexRefを同期
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
   const items = useMemo(() => search.data?.pages.flatMap((page) => page.results) ?? [], [search.data]);
 
+  // itemsの長さを同期
+  useEffect(() => {
+    itemsLengthRef.current = items.length;
+  }, [items.length]);
+
+  // 現在のアイテムIDを追跡（スライディングウィンドウでページ破棄時のインデックス調整用）
+  useEffect(() => {
+    if (items[activeIndex]) {
+      currentItemIdRef.current = String(items[activeIndex].id);
+    }
+  }, [activeIndex, items]);
+
+  // ページ破棄時のインデックス調整
+  useEffect(() => {
+    const currentOffset = search.itemOffset;
+    const prevOffset = prevItemOffsetRef.current;
+
+    // オフセットが増加した = 古いページが破棄された
+    if (currentOffset > prevOffset && currentItemIdRef.current) {
+      const newIndex = items.findIndex(item => String(item.id) === currentItemIdRef.current);
+      if (newIndex !== -1 && newIndex !== activeIndex) {
+        console.log(`[SearchScreen] Page dropped, adjusting index: ${activeIndex} -> ${newIndex}`);
+        setActiveIndex(newIndex);
+        activeIndexRef.current = newIndex;
+      }
+    }
+
+    prevItemOffsetRef.current = currentOffset;
+  }, [search.itemOffset, items, activeIndex]);
+
+  // 安定したコールバック（依存配列を空にして再生成を防止）
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0) {
         const index = viewableItems[0].index;
-        if (index !== null && index !== activeIndex) {
+        if (index !== null && index !== activeIndexRef.current) {
           setActiveIndex(index);
         }
       }
     },
-    [activeIndex]
+    []
   );
-
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 80,
-  });
 
   const flatListRef = useRef<FlatList>(null);
 
-  const handleEndReached = () => {
-    if (search.hasNextPage && !search.isFetchingNextPage) {
-      search.fetchNextPage();
+  const handleEndReached = useCallback(() => {
+    if (searchRef.current.hasNextPage && !searchRef.current.isFetchingNextPage) {
+      searchRef.current.fetchNextPage();
     }
-  };
+  }, []);
 
   const handleAutoSwipe = useCallback(() => {
-    const nextIndex = activeIndex + 1;
-    if (nextIndex < items.length) {
+    const nextIndex = activeIndexRef.current + 1;
+    if (nextIndex < itemsLengthRef.current) {
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
     }
-    if (nextIndex >= items.length - 5 && search.hasNextPage && !search.isFetchingNextPage) {
-      search.fetchNextPage();
+    // 残り3件でプリフェッチ
+    if (nextIndex >= itemsLengthRef.current - 3 && searchRef.current.hasNextPage && !searchRef.current.isFetchingNextPage) {
+      searchRef.current.fetchNextPage();
     }
-  }, [activeIndex, items.length, search]);
+  }, []);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -149,7 +202,7 @@ export default function SearchScreen() {
           decelerationRate="fast"
           showsVerticalScrollIndicator={false}
           onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig.current}
+          viewabilityConfig={VIEWABILITY_CONFIG}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
           getItemLayout={(data, index) => ({
