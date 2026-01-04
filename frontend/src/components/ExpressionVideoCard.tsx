@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
+import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { Expression } from '../api/types';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -28,6 +28,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     const videoRef = useRef<Video | null>(null);
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [videoError, setVideoError] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       play: async () => {
@@ -42,18 +43,12 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       },
     }));
 
-    // Audio modeを設定（音声再生を有効化）
-    useEffect(() => {
-      Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-      });
-    }, []);
+    // Audio modeはVideoFeedCardで初期化済み（重複を避ける）
 
     // expression idが変わった時にリセット
     useEffect(() => {
       setIsVideoLoaded(false);
+      setVideoError(null);
     }, [expression.id]);
 
     useEffect(() => {
@@ -86,6 +81,11 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       setIsPlaying(!isPlaying);
     };
 
+    const handleVideoError = (error: string) => {
+      console.warn('[ExpressionVideoCard] Video error:', error);
+      setVideoError(error);
+    };
+
     // タブバーがある場合は動画をヘッダーの下に配置（実測値を使用）
     const videoMarginTop = tabBarHeight > 0 ? tabBarHeight - 80 : -80;
 
@@ -98,11 +98,12 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
               source={{ uri: expression.video_url }}
               style={[styles.video, { marginTop: videoMarginTop }]}
               resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={isActive && isPlaying}
+              shouldPlay={isActive && isPlaying && !videoError}
               isLooping
               onPlaybackStatusUpdate={handlePlaybackStatus}
+              onError={handleVideoError}
             />
-            {!isVideoLoaded && expression.scene_image_url && (
+            {(!isVideoLoaded || videoError) && expression.scene_image_url && (
               <Image
                 source={{ uri: expression.scene_image_url }}
                 style={[styles.thumbnail, { marginTop: videoMarginTop }]}

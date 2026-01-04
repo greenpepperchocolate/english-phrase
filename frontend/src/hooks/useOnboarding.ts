@@ -1,8 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ONBOARDING_KEY = 'hasOnboarded';
 const SWIPE_GUIDE_KEY = 'hasSeenSwipeGuide';
+
+// セッション中にオンボーディングを完了したかどうか（アプリ再起動までリセットされない）
+let sessionCompletedOnboarding = false;
 
 export function useOnboarding() {
   const [hasOnboarded, setHasOnboarded] = useState<boolean | null>(null);
@@ -14,6 +17,13 @@ export function useOnboarding() {
 
   const checkOnboardingStatus = async () => {
     try {
+      // セッション中に完了済みの場合はスキップ
+      if (sessionCompletedOnboarding) {
+        setHasOnboarded(true);
+        setIsLoading(false);
+        return;
+      }
+
       // ローカル環境（開発モード）では毎回オンボーディングを表示
       if (__DEV__) {
         setHasOnboarded(false);
@@ -32,6 +42,7 @@ export function useOnboarding() {
   const completeOnboarding = useCallback(async () => {
     try {
       await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+      sessionCompletedOnboarding = true; // セッション中は完了状態を保持
       setHasOnboarded(true);
     } catch (error) {
       console.error('Error saving onboarding status:', error);
@@ -42,6 +53,7 @@ export function useOnboarding() {
     try {
       await AsyncStorage.removeItem(ONBOARDING_KEY);
       await AsyncStorage.removeItem(SWIPE_GUIDE_KEY);
+      sessionCompletedOnboarding = false; // セッションフラグもリセット
       setHasOnboarded(false);
     } catch (error) {
       console.error('Error resetting onboarding:', error);

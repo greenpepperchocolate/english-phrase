@@ -11,9 +11,29 @@ interface Props {
 export function SwipeGuide({ visible, onDismiss }: Props) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+  const bounceAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onDismissRef = useRef(onDismiss);
+
+  // onDismissの最新値を保持
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     if (visible) {
+      // 既存のアニメーションをクリーンアップ
+      if (bounceAnimationRef.current) {
+        bounceAnimationRef.current.stop();
+      }
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+
+      // アニメーション値をリセット
+      fadeAnim.setValue(0);
+      translateY.setValue(0);
+
       // フェードインとアニメーション開始
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -22,7 +42,7 @@ export function SwipeGuide({ visible, onDismiss }: Props) {
       }).start();
 
       // 上下に動くアニメーション（ループ）
-      const bounceAnimation = Animated.loop(
+      bounceAnimationRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(translateY, {
             toValue: -20,
@@ -36,25 +56,35 @@ export function SwipeGuide({ visible, onDismiss }: Props) {
           }),
         ])
       );
-      bounceAnimation.start();
+      bounceAnimationRef.current.start();
 
       // 3秒後に自動で非表示
-      const timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
+        if (bounceAnimationRef.current) {
+          bounceAnimationRef.current.stop();
+          bounceAnimationRef.current = null;
+        }
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 300,
           useNativeDriver: true,
         }).start(() => {
-          onDismiss();
+          onDismissRef.current();
         });
       }, 3000);
 
       return () => {
-        clearTimeout(timer);
-        bounceAnimation.stop();
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        if (bounceAnimationRef.current) {
+          bounceAnimationRef.current.stop();
+          bounceAnimationRef.current = null;
+        }
       };
     }
-  }, [visible, fadeAnim, translateY, onDismiss]);
+  }, [visible, fadeAnim, translateY]);
 
   if (!visible) return null;
 

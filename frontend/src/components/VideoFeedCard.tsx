@@ -50,6 +50,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const router = useRouter();
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [videoError, setVideoError] = useState<string | null>(null);
     const { settingsQuery } = useUserSettings();
     const playCountRef = useRef(0);
     const repeatCount = settingsQuery.data?.repeat_count ?? 3;
@@ -151,6 +152,8 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           playsInSilentModeIOS: true,
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
+        }).catch((error) => {
+          console.warn('[VideoFeedCard] Failed to set audio mode:', error);
         });
       }
     }, []);
@@ -174,6 +177,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       playCountRef.current = 0;
       setShouldPlayVideo(true);
       setIsVideoLoaded(false);    // ロード状態もリセット
+      setVideoError(null);        // エラー状態もリセット
       horizontalFlatListRef.current?.scrollToOffset({ offset: 0, animated: false });
     }, [phrase.id]);
 
@@ -258,6 +262,12 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       setIsPlaying(!isPlaying);
     };
 
+    const handleVideoError = useCallback((error: string) => {
+      console.warn('[VideoFeedCard] Video error:', error);
+      setVideoError(error);
+      // エラー時もサムネイルを表示したままにする
+    }, []);
+
     const handleFavoritePress = () => {
       if (isGuest) {
         Alert.alert(
@@ -339,11 +349,12 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                   source={{ uri: phrase.video_url }}
                   style={[styles.video, { marginTop: videoMarginTop }]}
                   resizeMode={ResizeMode.CONTAIN}
-                  shouldPlay={isActive && isPlaying && horizontalIndex === 0 && shouldPlayVideo}
+                  shouldPlay={isActive && isPlaying && horizontalIndex === 0 && shouldPlayVideo && !videoError}
                   isLooping={true}
                   onPlaybackStatusUpdate={handlePlaybackStatus}
+                  onError={handleVideoError}
                 />
-                {!isVideoLoaded && phrase.scene_image_url && (
+                {(!isVideoLoaded || videoError) && phrase.scene_image_url && (
                   <Image
                     source={{ uri: phrase.scene_image_url }}
                     style={[styles.thumbnail, { marginTop: videoMarginTop }]}

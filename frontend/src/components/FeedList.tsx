@@ -35,12 +35,26 @@ export function FeedList({ topic, isFocused = true }: Props) {
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
   const isFetchingRef = useRef(false);
 
+  // 安定したコールバック用のref（10000回スワイプ対応）
+  const feedRef = useRef(feed);
+  const itemsLengthRef = useRef(0);
+
+  // feedRefを同期（最新のfeedを参照）
+  useEffect(() => {
+    feedRef.current = feed;
+  }, [feed]);
+
   // activeIndexRefを同期
   useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
 
   const items = useMemo(() => feed.data?.pages.flatMap((page) => page.results) ?? [], [feed.data]);
+
+  // itemsの長さを同期（安定したコールバック用）
+  useEffect(() => {
+    itemsLengthRef.current = items.length;
+  }, [items.length]);
 
   // 安定したコールバック（依存配列を空にして再生成を防止）
   const onViewableItemsChanged = useCallback(
@@ -73,7 +87,7 @@ export function FeedList({ topic, isFocused = true }: Props) {
     };
   }, []);
 
-  // デバウンス処理: feed依存を削除して安定化
+  // デバウンス処理: feedRefを使用して安定化（10000回スワイプ対応）
   const debouncedFetchNextPage = useCallback(() => {
     // 既存のタイマーをクリア
     if (fetchNextPageTimeoutRef.current) {
@@ -88,10 +102,11 @@ export function FeedList({ topic, isFocused = true }: Props) {
 
     // 300ms後にフェッチ（500ms→300msに短縮してレスポンス向上）
     fetchNextPageTimeoutRef.current = setTimeout(() => {
+      const currentFeed = feedRef.current;
       // タイムアウト時点でも二重チェック
-      if (feed.hasNextPage && !isFetchingRef.current) {
+      if (currentFeed.hasNextPage && !isFetchingRef.current) {
         isFetchingRef.current = true; // 先にフラグを立てる
-        feed.fetchNextPage().catch((error) => {
+        currentFeed.fetchNextPage().catch((error) => {
           // エラーをキャッチして無視（AbortErrorなど）
           console.log('Fetch next page error (ignored):', error?.message);
         }).finally(() => {
@@ -100,29 +115,30 @@ export function FeedList({ topic, isFocused = true }: Props) {
       }
       fetchNextPageTimeoutRef.current = null;
     }, 300);
-  }, [feed]);
+  }, []); // 依存配列を空にして安定化
 
   const handleEndReached = useCallback(() => {
     // onEndReachedは複数回呼ばれることがあるため、厳密にチェック
-    if (!feed.hasNextPage || isFetchingRef.current) {
+    if (!feedRef.current.hasNextPage || isFetchingRef.current) {
       return;
     }
     debouncedFetchNextPage();
-  }, [feed.hasNextPage, debouncedFetchNextPage]);
+  }, [debouncedFetchNextPage]);
 
   const handleAutoSwipe = useCallback(() => {
     // 次の動画にスクロール
-    const nextIndex = activeIndex + 1;
-    if (nextIndex < items.length) {
+    const nextIndex = activeIndexRef.current + 1;
+    if (nextIndex < itemsLengthRef.current) {
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
     }
     // 最後に近づいたら次のページをプリフェッチ（残り3件に短縮）
-    if (nextIndex >= items.length - 3 && feed.hasNextPage && !isFetchingRef.current) {
+    if (nextIndex >= itemsLengthRef.current - 3 && feedRef.current.hasNextPage && !isFetchingRef.current) {
       debouncedFetchNextPage();
     }
-  }, [activeIndex, items.length, feed.hasNextPage, debouncedFetchNextPage]);
+  }, [debouncedFetchNextPage]); // 依存配列を最小化して安定化
 
-  // renderItemをuseCallbackでメモ化
+  // renderItemをuseCallbackでメモ化（10000回スワイプ対応）
+  // activeIndexの変更でrenderItemが再生成されるが、React.memoにより実際の再レンダリングは最小限
   const renderItem = useCallback(
     ({ item, index }: { item: PhraseSummary; index: number }) => (
       <MemoizedVideoFeedCard
@@ -144,7 +160,7 @@ export function FeedList({ topic, isFocused = true }: Props) {
         isGuest={tokens?.anonymous}
       />
     ),
-    [activeIndex, isFocused, items, router, toggleFavorite, toggleMastered, handleAutoSwipe, tokens?.anonymous]
+    [activeIndex, isFocused, router, toggleFavorite, toggleMastered, handleAutoSwipe, tokens?.anonymous]
   );
 
   // 初回ロード中のみローディング表示

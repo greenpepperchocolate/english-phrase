@@ -175,10 +175,25 @@ function HorizontalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
 
 // 縦スワイプチュートリアルコンポーネント
 function VerticalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
-  const [currentVideo, setCurrentVideo] = useState(0);
   const [hasCompleted, setHasCompleted] = useState(false);
+  const [showNextVideo, setShowNextVideo] = useState(false);
   const translateY = useRef(new Animated.Value(0)).current;
   const arrowAnim = useRef(new Animated.Value(0)).current;
+
+  // ================================================
+  // ここで動画カードの内容を設定できます
+  // ================================================
+  const currentVideo = {
+    emoji: '🎬',           // 絵文字（または画像コンポーネントに置換可能）
+    title: 'Video 1',
+    color: '#3b82f6',      // 背景色
+  };
+  const nextVideo = {
+    emoji: '🎥',
+    title: 'Video 2',
+    color: '#8b5cf6',
+  };
+  // ================================================
 
   // 上下に動くアニメーション
   useEffect(() => {
@@ -200,6 +215,8 @@ function VerticalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
     return () => animation.stop();
   }, [arrowAnim]);
 
+  const cardHeight = 300;
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -207,21 +224,22 @@ function VerticalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
         return Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
       },
       onPanResponderMove: (_, gestureState) => {
-        translateY.setValue(gestureState.dy);
+        // 上方向のみ許可
+        if (gestureState.dy < 0) {
+          translateY.setValue(gestureState.dy);
+        }
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy < -80 && currentVideo < 2) {
-          // 上スワイプ → 次の動画へ
-          Animated.spring(translateY, {
-            toValue: -300,
+        if (gestureState.dy < -80) {
+          // 上スワイプ → 次の動画を表示して完了
+          Animated.timing(translateY, {
+            toValue: -cardHeight - 20,
+            duration: 300,
             useNativeDriver: true,
           }).start(() => {
-            setCurrentVideo(prev => prev + 1);
-            translateY.setValue(0);
-            if (!hasCompleted) {
-              setHasCompleted(true);
-              setTimeout(onComplete, 500);
-            }
+            setShowNextVideo(true);
+            setHasCompleted(true);
+            setTimeout(onComplete, 500);
           });
         } else {
           Animated.spring(translateY, {
@@ -232,12 +250,6 @@ function VerticalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
       },
     })
   ).current;
-
-  const videos = [
-    { emoji: '🎬', title: 'Video 1', color: '#3b82f6' },
-    { emoji: '🎥', title: 'Video 2', color: '#8b5cf6' },
-    { emoji: '📹', title: 'Video 3', color: '#22c55e' },
-  ];
 
   return (
     <View style={tutorialStyles.container}>
@@ -253,21 +265,32 @@ function VerticalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
       <View style={tutorialStyles.videoArea} {...panResponder.panHandlers}>
         <Animated.View
           style={[
-            tutorialStyles.videoContainer,
+            tutorialStyles.videoStack,
             { transform: [{ translateY }] },
           ]}
         >
+          {/* 現在の動画 */}
           <View
             style={[
               tutorialStyles.videoCard,
-              { backgroundColor: videos[currentVideo].color },
+              { backgroundColor: currentVideo.color, height: cardHeight },
             ]}
           >
-            <Text style={tutorialStyles.videoEmoji}>{videos[currentVideo].emoji}</Text>
-            <Text style={tutorialStyles.videoTitle}>{videos[currentVideo].title}</Text>
-            <Text style={tutorialStyles.videoSubtitle}>
-              {currentVideo + 1} / {videos.length}
-            </Text>
+            <Text style={tutorialStyles.videoEmoji}>{currentVideo.emoji}</Text>
+            <Text style={tutorialStyles.videoTitle}>{currentVideo.title}</Text>
+            <Text style={tutorialStyles.videoSubtitle}>上にスワイプ！</Text>
+          </View>
+
+          {/* 次の動画（下に配置） */}
+          <View
+            style={[
+              tutorialStyles.videoCard,
+              { backgroundColor: nextVideo.color, height: cardHeight, marginTop: 20 },
+            ]}
+          >
+            <Text style={tutorialStyles.videoEmoji}>{nextVideo.emoji}</Text>
+            <Text style={tutorialStyles.videoTitle}>{nextVideo.title}</Text>
+            <Text style={tutorialStyles.videoSubtitle}>次の動画</Text>
           </View>
         </Animated.View>
       </View>
@@ -444,7 +467,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: '#000000',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -618,16 +641,21 @@ const tutorialStyles = StyleSheet.create({
   },
   videoArea: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     overflow: 'hidden',
+    paddingTop: 20,
+  },
+  videoStack: {
+    width: SCREEN_WIDTH - 80,
+    alignItems: 'center',
   },
   videoContainer: {
     width: SCREEN_WIDTH - 80,
     height: 300,
   },
   videoCard: {
-    flex: 1,
+    width: SCREEN_WIDTH - 80,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',

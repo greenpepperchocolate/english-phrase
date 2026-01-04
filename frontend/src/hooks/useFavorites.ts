@@ -3,6 +3,16 @@ import { useAuth } from '../providers/AuthProvider';
 import { PhraseSummary } from '../api/types';
 import { useMemo } from 'react';
 
+// セッション内でランダムシードを永続化
+let sessionFavoritesSeed: number | null = null;
+
+function getSessionFavoritesSeed(): number {
+  if (sessionFavoritesSeed === null) {
+    sessionFavoritesSeed = Math.floor(Math.random() * 1000000);
+  }
+  return sessionFavoritesSeed;
+}
+
 type FavoritesResponse = {
   results: PhraseSummary[];
   next: string | null;
@@ -26,12 +36,12 @@ function extractPageNumber(next: string | null): number | undefined {
 export function useFavorites() {
   const { authorizedFetch } = useAuth();
 
-  // アプリ起動時にランダムシードを生成
-  const randomSeed = useMemo(() => Math.floor(Math.random() * 1000000), []);
+  // セッション内で一貫したランダムシードを使用
+  const randomSeed = useMemo(() => getSessionFavoritesSeed(), []);
 
   return useInfiniteQuery<FavoritesResponse, Error>({
     queryKey: ['favorites', randomSeed],
-    queryFn: ({ pageParam }) => {
+    queryFn: async ({ pageParam }) => {
       const search = new URLSearchParams({ limit: '20' });
       if (pageParam && pageParam !== 1) {
         search.set('page', String(pageParam));
@@ -39,21 +49,34 @@ export function useFavorites() {
       // ランダムシードを追加
       search.set('seed', String(randomSeed));
       const url = `/favorites?${search.toString()}`;
-      return authorizedFetch<FavoritesResponse>(url);
+
+      try {
+        return await authorizedFetch<FavoritesResponse>(url);
+      } catch (error) {
+        // AbortErrorは静かに処理（キャッシュを使用）
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('[useFavorites] Request aborted, using cached data');
+          throw error;
+        }
+        throw error;
+      }
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     initialPageParam: 1,
-    // メモリ管理: FlatListのremoveClippedSubviewsとwindowSizeで最適化済み
-    // maxPagesは設定しない（戻るスクロールを可能にするため）
+    // メモリ管理: 10000回スワイプ対応
+    maxPages: 50, // 最大50ページをメモリに保持
 
-    // React Query設定: 1000回スワイプでもエラーが出ないように最適化
-    staleTime: 10 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    // React Query設定: 10000回スワイプでもエラーが出ないように最適化
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
     refetchOnMount: false,
     retry: (failureCount, error) => {
+      // AbortErrorはリトライしない
+      if (error instanceof Error && error.name === 'AbortError') return false;
       if (failureCount >= 3) return false;
+      // ネットワークエラーの場合のみリトライ
       if (error && 'isNetworkError' in error && error.isNetworkError) {
         return true;
       }

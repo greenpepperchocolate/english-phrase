@@ -3,6 +3,16 @@ import { useMemo } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { PhraseSummary } from '../api/types';
 
+// セッション内でランダムシードを永続化
+let sessionSearchSeed: number | null = null;
+
+function getSessionSearchSeed(): number {
+  if (sessionSearchSeed === null) {
+    sessionSearchSeed = Math.floor(Math.random() * 1000000);
+  }
+  return sessionSearchSeed;
+}
+
 type SearchResponse = {
   results: PhraseSummary[];
   next: string | null;
@@ -31,12 +41,12 @@ interface UseSearchOptions {
 export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
   const { authorizedFetch } = useAuth();
 
-  // ランダムシードを生成
-  const randomSeed = useMemo(() => Math.floor(Math.random() * 1000000), []);
+  // セッション内で一貫したランダムシードを使用
+  const randomSeed = useMemo(() => getSessionSearchSeed(), []);
 
   return useInfiniteQuery<SearchResponse, Error>({
     queryKey: ['search', query, randomSeed],
-    queryFn: ({ pageParam }) => {
+    queryFn: async ({ pageParam }) => {
       const search = new URLSearchParams({
         limit: String(pageSize),
         search: query,
@@ -46,22 +56,35 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
       }
       search.set('seed', String(randomSeed));
       const url = `/feed?${search.toString()}`;
-      return authorizedFetch<SearchResponse>(url);
+
+      try {
+        return await authorizedFetch<SearchResponse>(url);
+      } catch (error) {
+        // AbortErrorは静かに処理（キャッシュを使用）
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('[useSearch] Request aborted, using cached data');
+          throw error;
+        }
+        throw error;
+      }
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     initialPageParam: 1,
     enabled: query.length > 0, // 検索クエリがある場合のみ実行
-    // メモリ管理: FlatListのremoveClippedSubviewsとwindowSizeで最適化済み
-    // maxPagesは設定しない（戻るスクロールを可能にするため）
+    // メモリ管理: 10000回スワイプ対応
+    maxPages: 50, // 最大50ページをメモリに保持
 
-    // React Query設定: 1000回スワイプでもエラーが出ないように最適化
-    staleTime: 10 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    // React Query設定: 10000回スワイプでもエラーが出ないように最適化
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
     refetchOnMount: false,
     retry: (failureCount, error) => {
+      // AbortErrorはリトライしない
+      if (error instanceof Error && error.name === 'AbortError') return false;
       if (failureCount >= 3) return false;
+      // ネットワークエラーの場合のみリトライ
       if (error && 'isNetworkError' in error && error.isNetworkError) {
         return true;
       }

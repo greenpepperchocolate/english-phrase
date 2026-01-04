@@ -3,6 +3,16 @@ import { useAuth } from '../providers/AuthProvider';
 import { CursorPaginatedResponse, PhraseSummary } from '../api/types';
 import { useMemo } from 'react';
 
+// セッション内でランダムシードを永続化（コンポーネントのリマウントでも維持）
+let sessionFeedSeed: number | null = null;
+
+function getSessionFeedSeed(): number {
+  if (sessionFeedSeed === null) {
+    sessionFeedSeed = Math.floor(Math.random() * 1000000);
+  }
+  return sessionFeedSeed;
+}
+
 function extractPageNumber(next: string | null): number | undefined {
   if (!next) {
     return undefined;
@@ -20,8 +30,8 @@ function extractPageNumber(next: string | null): number | undefined {
 export function useFeed(params: { topic?: string; difficulty?: string; pageSize?: number }) {
   const { authorizedFetch } = useAuth();
 
-  // アプリ起動時にランダムシードを生成（このhookがマウントされるたびに1回だけ）
-  const randomSeed = useMemo(() => Math.floor(Math.random() * 1000000), []);
+  // セッション内で一貫したランダムシードを使用（キャッシュの安定性を確保）
+  const randomSeed = useMemo(() => getSessionFeedSeed(), []);
 
   return useInfiniteQuery<CursorPaginatedResponse<PhraseSummary>, Error>({
     queryKey: ['feed', params.topic, params.difficulty, params.pageSize, randomSeed],
@@ -57,17 +67,20 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
       }
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
-    // メモリ管理: FlatListのremoveClippedSubviewsとwindowSizeで最適化済み
-    // maxPagesは設定しない（戻るスクロールを可能にするため）
+    // メモリ管理: 10000回スワイプ対応
+    // maxPagesを設定してメモリ使用量を制限（古いページは自動的に破棄）
+    maxPages: 50, // 最大50ページ（500件）をメモリに保持
 
-    // React Query設定: 1000回スワイプでもエラーが出ないように最適化
-    staleTime: 10 * 60 * 1000, // 10分間はキャッシュを新鮮とみなす（5分→10分に延長）
-    gcTime: 30 * 60 * 1000, // 30分間キャッシュを保持（10分→30分に延長）
+    // React Query設定: 10000回スワイプでもエラーが出ないように最適化
+    staleTime: 5 * 60 * 1000, // 5分間はキャッシュを新鮮とみなす
+    gcTime: 10 * 60 * 1000, // 10分間キャッシュを保持（メモリ節約のため短縮）
     refetchOnWindowFocus: false, // ウィンドウフォーカス時の自動refetchを無効化
     refetchOnReconnect: true, // 再接続時は自動refetch（ネットワーク復帰時）
     refetchOnMount: false, // マウント時の自動refetchを無効化
     // ネットワークエラー時のみリトライ（サーバーエラーはリトライしない）
     retry: (failureCount, error) => {
+      // AbortErrorはリトライしない
+      if (error instanceof Error && error.name === 'AbortError') return false;
       // 3回までリトライ
       if (failureCount >= 3) return false;
       // ネットワークエラー（status 0）の場合のみリトライ
