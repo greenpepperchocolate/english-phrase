@@ -237,6 +237,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const handlePlaybackStatus = (status: AVPlaybackStatus) => {
       // 動画が読み込まれたらサムネイルを非表示に
       if (isPlaybackSuccess(status) && !isVideoLoaded) {
+        console.log(`[VideoFeedCard] Video loaded: phrase=${phrase.id}, duration=${status.durationMillis}ms`);
         setIsVideoLoaded(true);
       }
 
@@ -244,9 +245,22 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
         return;
       }
 
+      // 動画が実際にロードされていない場合はオートスワイプしない（URL期限切れ対策）
+      if (!isVideoLoaded) {
+        console.warn(`[VideoFeedCard] didJustFinish but video not loaded, skipping auto-swipe: phrase=${phrase.id}`);
+        return;
+      }
+
+      // 動画の長さが異常に短い場合（1秒未満）はスキップ（読み込み失敗の可能性）
+      if (status.durationMillis && status.durationMillis < 1000) {
+        console.warn(`[VideoFeedCard] Video too short (${status.durationMillis}ms), skipping auto-swipe: phrase=${phrase.id}`);
+        return;
+      }
+
       // 再生回数をインクリメント
       playCountRef.current += 1;
       const currentPlayCount = playCountRef.current;
+      console.log(`[VideoFeedCard] Play completed: phrase=${phrase.id}, count=${currentPlayCount}/${repeatCount}`);
 
       // 指定回数に達したら自動スワイプ
       if (currentPlayCount >= repeatCount) {
@@ -280,10 +294,11 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     };
 
     const handleVideoError = useCallback((error: string) => {
-      console.warn('[VideoFeedCard] Video error:', error);
+      console.warn(`[VideoFeedCard] Video error: phrase=${phrase.id}, url=${phrase.video_url?.substring(0, 50)}..., error=${error}`);
       setVideoError(error);
       // エラー時もサムネイルを表示したままにする
-    }, []);
+      // 注意: エラー時は自動スワイプしない（ユーザーが手動でスワイプする必要がある）
+    }, [phrase.id, phrase.video_url]);
 
     const handleFavoritePress = () => {
       if (isGuest) {

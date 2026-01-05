@@ -35,10 +35,6 @@ export function FeedList({ topic, isFocused = true }: Props) {
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
   const isFetchingRef = useRef(false);
 
-  // スライディングウィンドウ対応: 現在のアイテムIDを追跡
-  const currentItemIdRef = useRef<string | null>(null);
-  const prevItemOffsetRef = useRef(0);
-
   // 安定したコールバック用のref（10000回スワイプ対応）
   const feedRef = useRef(feed);
   const itemsLengthRef = useRef(0);
@@ -54,32 +50,6 @@ export function FeedList({ topic, isFocused = true }: Props) {
   }, [activeIndex]);
 
   const items = useMemo(() => feed.data?.pages.flatMap((page) => page.results) ?? [], [feed.data]);
-
-  // 現在のアイテムIDを追跡（スライディングウィンドウでページ破棄時のインデックス調整用）
-  useEffect(() => {
-    if (items[activeIndex]) {
-      currentItemIdRef.current = String(items[activeIndex].id);
-    }
-  }, [activeIndex, items]);
-
-  // ページ破棄時のインデックス調整
-  useEffect(() => {
-    const currentOffset = feed.itemOffset;
-    const prevOffset = prevItemOffsetRef.current;
-
-    // オフセットが増加した = 古いページが破棄された
-    if (currentOffset > prevOffset && currentItemIdRef.current) {
-      // 現在のアイテムを新しいインデックスで探す
-      const newIndex = items.findIndex(item => String(item.id) === currentItemIdRef.current);
-      if (newIndex !== -1 && newIndex !== activeIndex) {
-        console.log(`[FeedList] Page dropped, adjusting index: ${activeIndex} -> ${newIndex}`);
-        setActiveIndex(newIndex);
-        activeIndexRef.current = newIndex;
-      }
-    }
-
-    prevItemOffsetRef.current = currentOffset;
-  }, [feed.itemOffset, items, activeIndex]);
 
   // itemsの長さを同期（安定したコールバック用）
   useEffect(() => {
