@@ -2,7 +2,7 @@
   "expo": {
     "name": "映単語",
     "slug": "eitango",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "scheme": "eitango",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

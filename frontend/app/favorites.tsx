@@ -138,6 +138,7 @@ export default function FavoritesScreen() {
       >
         <View style={styles.backButtonInner}>
           <Text style={styles.backButtonIcon}>‹</Text>
+          <Text style={styles.backButtonText}>Back</Text>
         </View>
       </Pressable>
     </View>
@@ -155,9 +156,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backButtonInner: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -176,6 +178,12 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     marginLeft: -2,
     marginTop: -2,
+  },
+  backButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 2,
   },
   loading: {
     flex: 1,
