@@ -12,6 +12,58 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+def send_email_via_sendgrid(
+    to_email: str,
+    subject: str,
+    plain_content: str,
+    html_content: str | None = None,
+    from_email: str | None = None,
+) -> bool:
+    """
+    SendGrid Web APIを使ってメールを送信（SMTPより信頼性が高い）
+    """
+    from sendgrid import SendGridAPIClient
+    from sendgrid.helpers.mail import Mail, Content
+
+    api_key = getattr(settings, 'SENDGRID_API_KEY', '')
+    if not api_key:
+        from django.core.mail import send_mail
+        send_mail(
+            subject,
+            plain_content,
+            from_email or settings.DEFAULT_FROM_EMAIL,
+            [to_email],
+            html_message=html_content,
+            fail_silently=False,
+        )
+        return True
+
+    try:
+        message = Mail(
+            from_email=from_email or settings.DEFAULT_FROM_EMAIL,
+            to_emails=to_email,
+            subject=subject,
+        )
+        message.add_content(Content("text/plain", plain_content))
+        if html_content:
+            message.add_content(Content("text/html", html_content))
+
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
+
+        if response.status_code >= 200 and response.status_code < 300:
+            logger.info(f"Email sent successfully to {to_email}")
+            return True
+        else:
+            logger.error(f"SendGrid error: {response.status_code} - {response.body}")
+            return False
+
+    except Exception as e:
+        logger.error(f"Failed to send email via SendGrid: {e}", exc_info=True)
+        raise
+
+
+
 
 @dataclass(
     slots=True
@@ -70,7 +122,6 @@ def send_verification_email(user, token: str) -> None:
         user: Userオブジェクト
         token: 確認用トークン（UUID）
     """
-    from django.core.mail import send_mail
     from django.conf import settings
 
     # Use HTTP redirect page that opens the app (works in email clients)
@@ -120,13 +171,11 @@ def send_verification_email(user, token: str) -> None:
 </html>
 """
 
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        html_message=html_message,
-        fail_silently=False,
+    send_email_via_sendgrid(
+        to_email=user.email,
+        subject=subject,
+        plain_content=message,
+        html_content=html_message,
     )
 
 
@@ -138,7 +187,6 @@ def send_password_reset_email(user, token: str) -> None:
         user: Userオブジェクト
         token: リセット用トークン（UUID）
     """
-    from django.core.mail import send_mail
     from django.conf import settings
 
     # Use HTTP redirect page that opens the app (works in email clients)
@@ -191,26 +239,23 @@ def send_password_reset_email(user, token: str) -> None:
 </html>
 """
 
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        html_message=html_message,
-        fail_silently=False,
+    send_email_via_sendgrid(
+        to_email=user.email,
+        subject=subject,
+        plain_content=message,
+        html_content=html_message,
     )
 
 
-def send_contact_email(user, subject_type: str, message: str) -> None:
+def send_contact_email(user, subject_type: str, message_text: str) -> None:
     """
     管理者に問い合わせメールを送信
 
     Args:
         user: 送信者のUserオブジェクト
         subject_type: 問い合わせの種類 (bug_report, feature_request, other)
-        message: 問い合わせ内容
+        message_text: 問い合わせ内容
     """
-    from django.core.mail import send_mail
     from django.conf import settings
     from django.utils import timezone
 
@@ -279,13 +324,11 @@ def send_contact_email(user, subject_type: str, message: str) -> None:
     # Get admin email from settings
     admin_email = getattr(settings, 'ADMIN_EMAIL', settings.DEFAULT_FROM_EMAIL)
 
-    send_mail(
-        email_subject,
-        plain_message,
-        settings.DEFAULT_FROM_EMAIL,
-        [admin_email],
-        html_message=html_message,
-        fail_silently=False,
+    send_email_via_sendgrid(
+        to_email=admin_email,
+        subject=email_subject,
+        plain_content=plain_message,
+        html_content=html_message,
     )
 
 
