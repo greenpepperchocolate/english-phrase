@@ -26,6 +26,7 @@ def send_email_via_sendgrid(
     from sendgrid.helpers.mail import Mail, Content
 
     api_key = getattr(settings, 'SENDGRID_API_KEY', '')
+    logger.info(f"SendGrid API key exists: {bool(api_key)}, sending to: {to_email}")
     if not api_key:
         from django.core.mail import send_mail
         send_mail(
@@ -48,6 +49,7 @@ def send_email_via_sendgrid(
         if html_content:
             message.add_content(Content("text/html", html_content))
 
+        logger.info(f"Sending email via SendGrid Web API to {to_email}")
         sg = SendGridAPIClient(api_key)
         response = sg.send(message)
 
