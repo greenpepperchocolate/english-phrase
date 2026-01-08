@@ -22,6 +22,7 @@ let isAudioModeInitialized = false;
 interface Props {
   phrase: PhraseSummary;
   isActive: boolean;
+  shouldPreload?: boolean;
   isFavorite: boolean;
   isMastered: boolean;
   onToggleFavorite: (next: boolean) => void;
@@ -41,7 +42,7 @@ function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatus
 }
 
 export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
-  ({ phrase, isActive, isFavorite, isMastered, onToggleFavorite, onToggleMastered, onPress, onAutoSwipe, isGuest = false }, ref) => {
+  ({ phrase, isActive, shouldPreload = false, isFavorite, isMastered, onToggleFavorite, onToggleMastered, onPress, onAutoSwipe, isGuest = false }, ref) => {
     const videoRef = useRef<Video | null>(null);
     const expressionVideoRefs = useRef<Map<number, ExpressionVideoCardRef>>(new Map());
     const playbackLogger = usePlaybackLogger();
@@ -376,23 +377,18 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           <View style={styles.container}>
             {phrase.video_url ? (
               <>
-                <Video
-                  ref={videoRef}
-                  source={isActive ? { uri: phrase.video_url } : undefined}
-                  style={[styles.video, { marginTop: videoMarginTop }]}
-                  resizeMode={ResizeMode.CONTAIN}
-                  shouldPlay={isActive && isPlaying && horizontalIndex === 0 && shouldPlayVideo && !videoError}
-                  isLooping={true}
-                  onPlaybackStatusUpdate={handlePlaybackStatus}
-                  onError={handleVideoError}
-                />
-                {(!isVideoLoaded || videoError) && phrase.scene_image_url && (
-                  <Image
-                    source={{ uri: phrase.scene_image_url }}
-                    style={[styles.thumbnail, { marginTop: videoMarginTop }]}
-                    resizeMode="contain"
+                {(isActive || shouldPreload) && horizontalIndex === 0 ? (
+                  <Video
+                    ref={videoRef}
+                    source={{ uri: phrase.video_url }}
+                    style={[styles.video, { marginTop: videoMarginTop }]}
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay={isActive && isPlaying && shouldPlayVideo && !videoError}
+                    isLooping={true}
+                    onPlaybackStatusUpdate={handlePlaybackStatus}
+                    onError={handleVideoError}
                   />
-                )}
+                ) : null}
                 <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
                   {!isPlaying && (
                     <View style={styles.playIconContainer}>
@@ -974,6 +970,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
             }}
             expression={item.data}
             isActive={isActive && horizontalIndex === index}
+            shouldPreload={isActive && horizontalIndex + 1 === index}
             showJapanese={showJapanese}
             tabBarHeight={tabBarHeight}
           />

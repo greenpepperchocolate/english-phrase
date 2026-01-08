@@ -151,6 +151,7 @@ export function FeedList({ topic, isFocused = true }: Props) {
         }}
         phrase={item}
         isActive={index === activeIndex && isFocused}
+        shouldPreload={index === activeIndex + 1 && isFocused}
         isFavorite={item.is_favorite}
         isMastered={item.is_mastered}
         onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}

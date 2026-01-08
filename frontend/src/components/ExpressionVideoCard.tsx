@@ -9,6 +9,7 @@ const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 interface Props {
   expression: Expression;
   isActive: boolean;
+  shouldPreload?: boolean;
   showJapanese: boolean;
   tabBarHeight?: number;
 }
@@ -23,7 +24,7 @@ function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatus
 }
 
 export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
-  ({ expression, isActive, showJapanese, tabBarHeight = 0 }, ref) => {
+  ({ expression, isActive, shouldPreload = false, showJapanese, tabBarHeight = 0 }, ref) => {
     const insets = useSafeAreaInsets();
     const videoRef = useRef<Video | null>(null);
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
@@ -93,23 +94,18 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       <View style={styles.container}>
         {expression.video_url ? (
           <>
-            <Video
-              ref={videoRef}
-              source={isActive ? { uri: expression.video_url } : undefined}
-              style={[styles.video, { marginTop: videoMarginTop }]}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={isActive && isPlaying && !videoError}
-              isLooping
-              onPlaybackStatusUpdate={handlePlaybackStatus}
-              onError={handleVideoError}
-            />
-            {(!isVideoLoaded || videoError) && expression.scene_image_url && (
-              <Image
-                source={{ uri: expression.scene_image_url }}
-                style={[styles.thumbnail, { marginTop: videoMarginTop }]}
-                resizeMode="contain"
+            {(isActive || shouldPreload) ? (
+              <Video
+                ref={videoRef}
+                source={{ uri: expression.video_url }}
+                style={[styles.video, { marginTop: videoMarginTop }]}
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay={isActive && isPlaying && !videoError}
+                isLooping
+                onPlaybackStatusUpdate={handlePlaybackStatus}
+                onError={handleVideoError}
               />
-            )}
+            ) : null}
             <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
               {!isPlaying && (
                 <View style={styles.playIconContainer}>
