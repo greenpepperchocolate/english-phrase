@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserSettings } from '../src/hooks/useUserSettings';
+import { APP_VERSION } from '../src/utils/config';
 import { useAuth } from '../src/providers/AuthProvider';
 
 function ContactForm({ scrollToInput }: { scrollToInput: () => void }) {

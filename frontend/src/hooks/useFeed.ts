@@ -1,17 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useAuth } from '../providers/AuthProvider';
 import { CursorPaginatedResponse, PhraseSummary } from '../api/types';
-import { useMemo } from 'react';
-
-// セッション内でランダムシードを永続化（コンポーネントのリマウントでも維持）
-let sessionFeedSeed: number | null = null;
-
-function getSessionFeedSeed(): number {
-  if (sessionFeedSeed === null) {
-    sessionFeedSeed = Math.floor(Math.random() * 1000000);
-  }
-  return sessionFeedSeed;
-}
+import { useFeedSeed } from './useFeedSeed';
 
 function extractPageNumber(next: string | null): number | undefined {
   if (!next) {
@@ -30,11 +20,12 @@ function extractPageNumber(next: string | null): number | undefined {
 export function useFeed(params: { topic?: string; difficulty?: string; pageSize?: number }) {
   const { authorizedFetch } = useAuth();
 
-  // セッション内で一貫したランダムシードを使用（キャッシュの安定性を確保）
-  const randomSeed = useMemo(() => getSessionFeedSeed(), []);
+  // 日替わり・トピック/難易度別のランダムシードを使用
+  const { seed: randomSeed, isLoading: isSeedLoading } = useFeedSeed(params.topic, params.difficulty);
 
   return useInfiniteQuery<CursorPaginatedResponse<PhraseSummary>, Error>({
     queryKey: ['feed', params.topic, params.difficulty, params.pageSize, randomSeed],
+    enabled: !isSeedLoading && randomSeed !== null, // seedロード完了まで待つ
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
       const search = new URLSearchParams();

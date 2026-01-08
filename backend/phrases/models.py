@@ -3,6 +3,9 @@ from django.db import models
 from django.utils import timezone
 import uuid
 
+# 復習ウィンドウ（1週間）- 将来の拡張用
+REVIEW_WINDOW_DAYS = 7
+
 
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)

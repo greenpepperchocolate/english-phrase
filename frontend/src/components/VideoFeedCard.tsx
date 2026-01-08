@@ -378,7 +378,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
               <>
                 <Video
                   ref={videoRef}
-                  source={{ uri: phrase.video_url }}
+                  source={isActive ? { uri: phrase.video_url } : undefined}
                   style={[styles.video, { marginTop: videoMarginTop }]}
                   resizeMode={ResizeMode.CONTAIN}
                   shouldPlay={isActive && isPlaying && horizontalIndex === 0 && shouldPlayVideo && !videoError}

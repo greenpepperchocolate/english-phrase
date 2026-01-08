@@ -1,17 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { PhraseSummary } from '../api/types';
-
-// セッション内でランダムシードを永続化
-let sessionSearchSeed: number | null = null;
-
-function getSessionSearchSeed(): number {
-  if (sessionSearchSeed === null) {
-    sessionSearchSeed = Math.floor(Math.random() * 1000000);
-  }
-  return sessionSearchSeed;
-}
+import { useFeedSeed } from './useFeedSeed';
 
 type SearchResponse = {
   results: PhraseSummary[];
@@ -41,8 +31,8 @@ interface UseSearchOptions {
 export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
   const { authorizedFetch } = useAuth();
 
-  // セッション内で一貫したランダムシードを使用
-  const randomSeed = useMemo(() => getSessionSearchSeed(), []);
+  // 日替わりのランダムシードを使用（検索は"all"として扱う）
+  const { seed: randomSeed, isLoading: isSeedLoading } = useFeedSeed();
 
   return useInfiniteQuery<SearchResponse, Error>({
     queryKey: ['search', query, randomSeed],
@@ -70,7 +60,7 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
     },
     getNextPageParam: (lastPage) => extractPageNumber(lastPage.next),
     initialPageParam: 1,
-    enabled: query.length > 0,
+    enabled: query.length > 0 && !isSeedLoading && randomSeed !== null,
 
     // メモリ管理: maxPagesは使用しない（FlatListのremoveClippedSubviewsで管理）
 

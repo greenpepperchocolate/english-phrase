@@ -95,7 +95,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
           <>
             <Video
               ref={videoRef}
-              source={{ uri: expression.video_url }}
+              source={isActive ? { uri: expression.video_url } : undefined}
               style={[styles.video, { marginTop: videoMarginTop }]}
               resizeMode={ResizeMode.CONTAIN}
               shouldPlay={isActive && isPlaying && !videoError}
