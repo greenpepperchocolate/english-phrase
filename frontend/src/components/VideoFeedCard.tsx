@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
 import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { usePlaybackLogger } from '../hooks/usePlaybackLogger';
 import { useUserSettings } from '../hooks/useUserSettings';
 import { useAuth } from '../providers/AuthProvider';
 import { ExpressionVideoCard, ExpressionVideoCardRef } from './ExpressionVideoCard';
+import { useVideoLoading } from '../contexts/VideoLoadingContext';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -62,6 +63,66 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const [tabBarHeight, setTabBarHeight] = useState(0);
     const horizontalIndexRef = useRef(0); // 安定したコールバック用
     const autoSwipeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 自動スワイプタイマー
+
+    // 動画ロードキュー管理
+    const { registerLoading, unregisterLoading, canLoad } = useVideoLoading();
+    const videoIdRef = useRef(`phrase-${phrase.id}`);
+    const isRegisteredRef = useRef(false);
+    const [canLoadVideo, setCanLoadVideo] = useState(false);
+
+    // 動画IDが変わった場合にリセット
+    useEffect(() => {
+      const oldVideoId = videoIdRef.current;
+      videoIdRef.current = `phrase-${phrase.id}`;
+      if (oldVideoId !== videoIdRef.current && isRegisteredRef.current) {
+        unregisterLoading(oldVideoId);
+        isRegisteredRef.current = false;
+      }
+    }, [phrase.id, unregisterLoading]);
+
+    // ロード可能かチェック（isActive または shouldPreload の場合）
+    useEffect(() => {
+      const shouldTryLoad = (isActive || shouldPreload) && horizontalIndex === 0;
+
+      if (shouldTryLoad && !isRegisteredRef.current) {
+        const canRegister = registerLoading(videoIdRef.current);
+        if (canRegister) {
+          isRegisteredRef.current = true;
+          setCanLoadVideo(true);
+          console.log(`[VideoFeedCard] Video can load: ${videoIdRef.current}`);
+        } else {
+          setCanLoadVideo(false);
+          console.log(`[VideoFeedCard] Video load blocked: ${videoIdRef.current}`);
+        }
+      } else if (!shouldTryLoad && isRegisteredRef.current) {
+        // アクティブでなくなったら登録解除
+        unregisterLoading(videoIdRef.current);
+        isRegisteredRef.current = false;
+        setCanLoadVideo(false);
+      }
+    }, [isActive, shouldPreload, horizontalIndex, registerLoading, unregisterLoading]);
+
+    // コンポーネントアンマウント時にクリーンアップ
+    useEffect(() => {
+      return () => {
+        if (isRegisteredRef.current) {
+          unregisterLoading(videoIdRef.current);
+          isRegisteredRef.current = false;
+        }
+      };
+    }, [unregisterLoading]);
+
+    // 動画ロード完了時にスロットを解放（プリロードの場合のみ）
+    const handleVideoReadyForDisplay = useCallback(() => {
+      console.log(`[VideoFeedCard] Video ready: ${videoIdRef.current}`);
+      // プリロードで待機中の場合、ロード完了後にスロットを解放して他の動画がロードできるようにする
+      // ただし、アクティブな動画は再生中なので解放しない
+      if (!isActive && isRegisteredRef.current) {
+        unregisterLoading(videoIdRef.current);
+        isRegisteredRef.current = false;
+        // 解放後もcanLoadVideoはtrueのままにして動画を表示し続ける
+      }
+    }, [isActive, unregisterLoading]);
 
     // キラキラエフェクト用のアニメーション値
     const sparkleAnim1 = useRef(new Animated.Value(0)).current;
@@ -373,11 +434,14 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
         const videoMarginTop = hasExpressions && tabBarHeight > 0 ? tabBarHeight - 80 : -80;
 
 
+        // ロードスロットが確保できているか、または既にロード済みかをチェック
+        const shouldRenderVideo = canLoadVideo || isVideoLoaded;
+
         return (
           <View style={styles.container}>
             {phrase.video_url ? (
               <>
-                {(isActive || shouldPreload) && horizontalIndex === 0 ? (
+                {shouldRenderVideo && horizontalIndex === 0 ? (
                   <Video
                     ref={videoRef}
                     source={{ uri: phrase.video_url }}
@@ -386,9 +450,18 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                     shouldPlay={isActive && isPlaying && shouldPlayVideo && !videoError}
                     isLooping={true}
                     onPlaybackStatusUpdate={handlePlaybackStatus}
+                    onReadyForDisplay={handleVideoReadyForDisplay}
                     onError={handleVideoError}
                   />
-                ) : null}
+                ) : (
+                  // ロード待機中のプレースホルダー
+                  (isActive || shouldPreload) && horizontalIndex === 0 ? (
+                    <View style={[styles.loadingPlaceholder, { marginTop: videoMarginTop }]}>
+                      <ActivityIndicator size="large" color="#ffffff" />
+                      <Text style={styles.loadingText}>Loading...</Text>
+                    </View>
+                  ) : null
+                )}
                 <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
                   {!isPlaying && (
                     <View style={styles.playIconContainer}>
@@ -1083,6 +1156,18 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: '#ffffff',
     fontSize: 16,
+  },
+  loadingPlaceholder: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  loadingText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    marginTop: 12,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

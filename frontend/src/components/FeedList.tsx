@@ -8,6 +8,7 @@ import { useMasteredToggle } from '../hooks/useMasteredToggle';
 import { PhraseSummary } from '../api/types';
 import { VideoFeedCard, VideoFeedCardRef } from './VideoFeedCard';
 import { ErrorFallback } from './ErrorFallback';
+import { VideoLoadingProvider } from '../contexts/VideoLoadingContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -179,44 +180,46 @@ export function FeedList({ topic, isFocused = true }: Props) {
   }
 
   return (
-    <FlatList
-      ref={flatListRef}
-      data={items}
-      keyExtractor={(item) => String(item.id)}
-      renderItem={renderItem}
-      pagingEnabled
-      snapToInterval={SCREEN_HEIGHT}
-      decelerationRate="fast"
-      showsVerticalScrollIndicator={false}
-      onViewableItemsChanged={onViewableItemsChanged}
-      viewabilityConfig={VIEWABILITY_CONFIG}
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.5}
-      getItemLayout={(data, index) => ({
-        length: SCREEN_HEIGHT,
-        offset: SCREEN_HEIGHT * index,
-        index,
-      })}
-      // メモリ最適化設定
-      removeClippedSubviews={true}
-      windowSize={3}
-      maxToRenderPerBatch={2}
-      initialNumToRender={2}
-      updateCellsBatchingPeriod={50}
-      ListEmptyComponent={() => (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>No videos available</Text>
-          <Text style={styles.emptySubtext}>Add some phrases from the admin panel</Text>
-        </View>
-      )}
-      ListFooterComponent={() =>
-        feed.isFetchingNextPage ? (
-          <View style={styles.loadingFooter}>
-            <ActivityIndicator size="small" color="#ffffff" />
+    <VideoLoadingProvider>
+      <FlatList
+        ref={flatListRef}
+        data={items}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderItem}
+        pagingEnabled
+        snapToInterval={SCREEN_HEIGHT}
+        decelerationRate="fast"
+        showsVerticalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={VIEWABILITY_CONFIG}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.3}
+        getItemLayout={(data, index) => ({
+          length: SCREEN_HEIGHT,
+          offset: SCREEN_HEIGHT * index,
+          index,
+        })}
+        // メモリ最適化設定（デコーダ枯渇防止のため厳格化）
+        removeClippedSubviews={true}
+        windowSize={2}
+        maxToRenderPerBatch={1}
+        initialNumToRender={1}
+        updateCellsBatchingPeriod={100}
+        ListEmptyComponent={() => (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>No videos available</Text>
+            <Text style={styles.emptySubtext}>Add some phrases from the admin panel</Text>
           </View>
-        ) : null
-      }
-    />
+        )}
+        ListFooterComponent={() =>
+          feed.isFetchingNextPage ? (
+            <View style={styles.loadingFooter}>
+              <ActivityIndicator size="small" color="#ffffff" />
+            </View>
+          ) : null
+        }
+      />
+    </VideoLoadingProvider>
   );
 }
 
