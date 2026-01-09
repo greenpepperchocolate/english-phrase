@@ -1,0 +1,54 @@
+[
+  {
+    "id": 38,
+    "username": "anon_64a51458@example.com",
+    "email": "anon_64a51458@example.com",
+    "password": "!YTqghH6wkgfn1QciuLiYUSIzKrmWiNc3CSVOhDmu",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_staff": false,
+    "is_superuser": false,
+    "date_joined": "2026-01-01T13:59:32.823255+00:00",
+    "last_login": null
+  },
+  {
+    "id": 1,
+    "username": "greenpepperchocolate@yahoo.co.jp",
+    "email": "greenpepperchocolate@yahoo.co.jp",
+    "password": "pbkdf2_sha256$1000000$VhuIxtRVEPaqkGSWV0yOHb$P7g3LpdqFjqbkC4zhdbmkvIzaZsLTDWpjlFT2WemC30=",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_staff": true,
+    "is_superuser": true,
+    "date_joined": "2025-10-07T14:04:42.155461+00:00",
+    "last_login": "2026-01-02T23:37:19.647365+00:00"
+  },
+  {
+    "id": 36,
+    "username": "t_kawabe@vision-net.co.jp",
+    "email": "t_kawabe@vision-net.co.jp",
+    "password": "pbkdf2_sha256$1000000$H2ZDCpYMA2dlZ9QgNv1Wna$bYYYSuURKR0MCb2n483MwKbvX1hXPosYiT47giTof64=",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_staff": true,
+    "is_superuser": true,
+    "date_joined": "2025-12-27T09:08:37.266334+00:00",
+    "last_login": null
+  },
+  {
+    "id": 37,
+    "username": "anon_1ac7ce99@example.com",
+    "email": "anon_1ac7ce99@example.com",
+    "password": "!XpqB0ZRCVyBTCO65ye59Z8A29iRXaOLiIQiA0oAV",
+    "first_name": "",
+    "last_name": "",
+    "is_active": true,
+    "is_staff": false,
+    "is_superuser": false,
+    "date_joined": "2026-01-01T06:59:31.250185+00:00",
+    "last_login": null
+  }
+]
