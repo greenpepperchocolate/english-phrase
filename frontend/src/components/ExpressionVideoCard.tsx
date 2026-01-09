@@ -1,16 +1,14 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { Expression } from '../api/types';
-import { useVideoLoading } from '../contexts/VideoLoadingContext';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Props {
   expression: Expression;
   isActive: boolean;
-  shouldPreload?: boolean;
   showJapanese: boolean;
   tabBarHeight?: number;
 }
@@ -25,72 +23,12 @@ function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatus
 }
 
 export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
-  ({ expression, isActive, shouldPreload = false, showJapanese, tabBarHeight = 0 }, ref) => {
+  ({ expression, isActive, showJapanese, tabBarHeight = 0 }, ref) => {
     const insets = useSafeAreaInsets();
     const videoRef = useRef<Video | null>(null);
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
     const [videoError, setVideoError] = useState<string | null>(null);
-
-    // 動画ロードキュー管理
-    const { registerLoading, unregisterLoading } = useVideoLoading();
-    const videoIdRef = useRef(`expression-${expression.id}`);
-    const isRegisteredRef = useRef(false);
-    const [canLoadVideo, setCanLoadVideo] = useState(false);
-
-    // 動画IDが変わった場合にリセット
-    useEffect(() => {
-      const oldVideoId = videoIdRef.current;
-      videoIdRef.current = `expression-${expression.id}`;
-      if (oldVideoId !== videoIdRef.current && isRegisteredRef.current) {
-        unregisterLoading(oldVideoId);
-        isRegisteredRef.current = false;
-      }
-    }, [expression.id, unregisterLoading]);
-
-    // ロード可能かチェック（isActive または shouldPreload の場合）
-    useEffect(() => {
-      const shouldTryLoad = isActive || shouldPreload;
-
-      if (shouldTryLoad && !isRegisteredRef.current) {
-        const canRegister = registerLoading(videoIdRef.current);
-        if (canRegister) {
-          isRegisteredRef.current = true;
-          setCanLoadVideo(true);
-          console.log(`[ExpressionVideoCard] Video can load: ${videoIdRef.current}`);
-        } else {
-          setCanLoadVideo(false);
-          console.log(`[ExpressionVideoCard] Video load blocked: ${videoIdRef.current}`);
-        }
-      } else if (!shouldTryLoad && isRegisteredRef.current) {
-        // アクティブでなくなったら登録解除
-        unregisterLoading(videoIdRef.current);
-        isRegisteredRef.current = false;
-        setCanLoadVideo(false);
-      }
-    }, [isActive, shouldPreload, registerLoading, unregisterLoading]);
-
-    // コンポーネントアンマウント時にクリーンアップ
-    useEffect(() => {
-      return () => {
-        if (isRegisteredRef.current) {
-          unregisterLoading(videoIdRef.current);
-          isRegisteredRef.current = false;
-        }
-      };
-    }, [unregisterLoading]);
-
-    // 動画ロード完了時にスロットを解放（プリロードの場合のみ）
-    const handleVideoReadyForDisplay = useCallback(() => {
-      console.log(`[ExpressionVideoCard] Video ready: ${videoIdRef.current}`);
-      // プリロードで待機中の場合、ロード完了後にスロットを解放して他の動画がロードできるようにする
-      // ただし、アクティブな動画は再生中なので解放しない
-      if (!isActive && isRegisteredRef.current) {
-        unregisterLoading(videoIdRef.current);
-        isRegisteredRef.current = false;
-        // 解放後もcanLoadVideoはtrueのままにして動画を表示し続ける
-      }
-    }, [isActive, unregisterLoading]);
 
     useImperativeHandle(ref, () => ({
       play: async () => {
@@ -105,9 +43,6 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       },
     }));
 
-    // Audio modeはVideoFeedCardで初期化済み（重複を避ける）
-
-    // expression idが変わった時にリセット
     useEffect(() => {
       setIsVideoLoaded(false);
       setVideoError(null);
@@ -143,46 +78,35 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       setIsPlaying(!isPlaying);
     };
 
-    const handleVideoError = useCallback((error: string) => {
+    const handleVideoError = (error: string) => {
       console.warn('[ExpressionVideoCard] Video error:', error);
       setVideoError(error);
-      // エラー時もスロットを解放
-      if (isRegisteredRef.current) {
-        unregisterLoading(videoIdRef.current);
-        isRegisteredRef.current = false;
-      }
-    }, [unregisterLoading]);
+    };
 
-    // タブバーがある場合は動画をヘッダーの下に配置（実測値を使用）
     const videoMarginTop = tabBarHeight > 0 ? tabBarHeight - 80 : -80;
-
-    // ロードスロットが確保できているか、または既にロード済みかをチェック
-    const shouldRenderVideo = canLoadVideo || isVideoLoaded;
 
     return (
       <View style={styles.container}>
         {expression.video_url ? (
           <>
-            {shouldRenderVideo ? (
+            {isActive ? (
               <Video
                 ref={videoRef}
                 source={{ uri: expression.video_url }}
                 style={[styles.video, { marginTop: videoMarginTop }]}
                 resizeMode={ResizeMode.CONTAIN}
-                shouldPlay={isActive && isPlaying && !videoError}
+                shouldPlay={isPlaying && !videoError}
                 isLooping
                 onPlaybackStatusUpdate={handlePlaybackStatus}
-                onReadyForDisplay={handleVideoReadyForDisplay}
                 onError={handleVideoError}
               />
-            ) : (
-              // ロード待機中のプレースホルダー
-              (isActive || shouldPreload) ? (
-                <View style={[styles.loadingPlaceholder, { marginTop: videoMarginTop }]}>
-                  <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={styles.loadingText}>Loading...</Text>
-                </View>
-              ) : null
+            ) : null}
+            {(!isActive || !isVideoLoaded || videoError) && expression.scene_image_url && (
+              <Image
+                source={{ uri: expression.scene_image_url }}
+                style={[styles.thumbnail, { marginTop: videoMarginTop }]}
+                resizeMode="contain"
+              />
             )}
             <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
               {!isPlaying && (
@@ -197,8 +121,6 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
             <Text style={styles.placeholderText}>No video available</Text>
           </View>
         )}
-
-        {/* テキスト情報 */}
         <View style={[styles.textOverlay, { bottom: insets.bottom + 106 }]}>
           <Text style={styles.expressionText}>{expression.text}</Text>
           {showJapanese && <Text style={styles.meaningText}>{expression.meaning}</Text>}
@@ -262,18 +184,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: '#ffffff',
     fontSize: 16,
-  },
-  loadingPlaceholder: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-  },
-  loadingText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    marginTop: 12,
   },
   textOverlay: {
     position: 'absolute',
