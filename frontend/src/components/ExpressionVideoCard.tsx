@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { Expression } from '../api/types';
@@ -127,7 +127,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       setVideoError(error);
     };
 
-    const videoMarginTop = tabBarHeight > 0 ? tabBarHeight - 80 : -80;
+    const videoMarginTop = tabBarHeight > 0 ? tabBarHeight : 0;
 
     return (
       <View style={styles.container}>
@@ -145,7 +145,18 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
                 onError={handleVideoError}
               />
             ) : null}
-            
+            {/* ローディング表示 */}
+            {isActive && isLoadRegistered && !isVideoLoaded && !videoError && (
+              <View style={[styles.loadingContainer, { marginTop: videoMarginTop }]}>
+                <ActivityIndicator size="large" color="#ffffff" />
+              </View>
+            )}
+            {/* エラー表示 */}
+            {videoError && (
+              <View style={[styles.loadingContainer, { marginTop: videoMarginTop }]}>
+                <Text style={styles.errorText}>動画を読み込めませんでした</Text>
+              </View>
+            )}
             <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
               {!isPlaying && (
                 <View style={styles.playIconContainer}>
@@ -179,7 +190,6 @@ const styles = StyleSheet.create({
   video: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
-    marginTop: -80,
   },
   playPauseArea: {
     position: 'absolute',
@@ -250,5 +260,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 8,
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  errorText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
   },
 });

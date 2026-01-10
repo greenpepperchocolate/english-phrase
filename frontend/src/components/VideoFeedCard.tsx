@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
 import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -415,7 +415,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const renderHorizontalItem = ({ item, index }: { item: typeof horizontalItems[0]; index: number }) => {
       if (item.type === 'phrase') {
         // タブバーがある場合は動画をヘッダーの下に配置（実測値を使用）
-        const videoMarginTop = hasExpressions && tabBarHeight > 0 ? tabBarHeight - 80 : -80;
+        const videoMarginTop = hasExpressions && tabBarHeight > 0 ? tabBarHeight : 0;
 
 
         return (
@@ -1336,5 +1336,19 @@ const styles = StyleSheet.create({
     right: 20,
     height: 2,
     backgroundColor: '#3b82f6',
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  errorText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
   },
 });
