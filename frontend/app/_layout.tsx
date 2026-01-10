@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '../src/providers/AuthProvider';
 import { AppQueryClientProvider, queryClient } from '../src/providers/QueryProvider';
 import { AuthBoundary } from '../src/components/AuthBoundary';
+import { VideoLoadingProvider } from '../src/contexts/VideoLoadingContext';
 
 // Sentryの初期化は本番ビルド時のみ
 // 開発環境では依存関係の問題を避けるため無効化
@@ -32,6 +33,7 @@ export default function RootLayout() {
       <AuthProvider queryClient={queryClient}>
         <AppQueryClientProvider>
           <AuthBoundary>
+            <VideoLoadingProvider>
             <StatusBar style="auto" />
             <Stack
             screenOptions={{
@@ -114,6 +116,7 @@ export default function RootLayout() {
               }}
             />
             </Stack>
+          </VideoLoadingProvider>
           </AuthBoundary>
         </AppQueryClientProvider>
       </AuthProvider>

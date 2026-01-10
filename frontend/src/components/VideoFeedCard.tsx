@@ -8,6 +8,7 @@ import { usePlaybackLogger } from '../hooks/usePlaybackLogger';
 import { useUserSettings } from '../hooks/useUserSettings';
 import { useAuth } from '../providers/AuthProvider';
 import { ExpressionVideoCard, ExpressionVideoCardRef } from './ExpressionVideoCard';
+import { useVideoLoading } from '../contexts/VideoLoadingContext';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -61,6 +62,12 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const [tabBarHeight, setTabBarHeight] = useState(0);
     const horizontalIndexRef = useRef(0); // 安定したコールバック用
     const autoSwipeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 自動スワイプタイマー
+
+    // デコーダ枯渇防止: ロード制御
+    const { registerLoading, unregisterLoading } = useVideoLoading();
+    const [isLoadRegistered, setIsLoadRegistered] = useState(false);
+    const videoId = `phrase-${phrase.id}`;
+    const loadRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // キラキラエフェクト用のアニメーション値
     const sparkleAnim1 = useRef(new Animated.Value(0)).current;
@@ -171,6 +178,45 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       },
       [] // 依存配列を空にして安定化
     );
+
+    // デコーダ枯渇防止: ロード登録制御
+    useEffect(() => {
+      // アクティブ かつ メインフレーズ動画表示中の場合のみ登録を試みる
+      if (isActive && horizontalIndex === 0) {
+        const tryRegister = () => {
+          if (registerLoading(videoId)) {
+            setIsLoadRegistered(true);
+          } else {
+            // 登録失敗時は300ms後に再試行
+            loadRetryTimerRef.current = setTimeout(tryRegister, 300);
+          }
+        };
+        tryRegister();
+      } else {
+        // 非アクティブ or 横スワイプで別画面の場合は登録解除
+        if (isLoadRegistered) {
+          unregisterLoading(videoId);
+          setIsLoadRegistered(false);
+        }
+        if (loadRetryTimerRef.current) {
+          clearTimeout(loadRetryTimerRef.current);
+          loadRetryTimerRef.current = null;
+        }
+      }
+      return () => {
+        if (loadRetryTimerRef.current) {
+          clearTimeout(loadRetryTimerRef.current);
+          loadRetryTimerRef.current = null;
+        }
+      };
+    }, [isActive, horizontalIndex, videoId, registerLoading, unregisterLoading]);
+
+    // コンポーネントのアンマウント時に登録解除
+    useEffect(() => {
+      return () => {
+        unregisterLoading(videoId);
+      };
+    }, [videoId, unregisterLoading]);
 
     // phrase idが変わった時に横スワイプとカウントをリセット
     useEffect(() => {
@@ -376,7 +422,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           <View style={styles.container}>
             {phrase.video_url ? (
               <>
-                                {isActive && horizontalIndex === 0 ? (
+                                {isActive && horizontalIndex === 0 && isLoadRegistered ? (
                 <Video
                   ref={videoRef}
                   source={{ uri: phrase.video_url }}
@@ -388,7 +434,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                   onError={handleVideoError}
                 />
                 ) : null}
-                {(!isActive || horizontalIndex !== 0 || !isVideoLoaded || videoError) && phrase.scene_image_url && (
+                {(!isActive || horizontalIndex !== 0 || !isLoadRegistered || !isVideoLoaded || videoError) && phrase.scene_image_url && (
                   <Image
                     source={{ uri: phrase.scene_image_url }}
                     style={[styles.thumbnail, { marginTop: videoMarginTop }]}

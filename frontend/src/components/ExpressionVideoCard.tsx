@@ -3,6 +3,7 @@ import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { Expression } from '../api/types';
+import { useVideoLoading } from '../contexts/VideoLoadingContext';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -30,6 +31,12 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     const [isPlaying, setIsPlaying] = useState(true);
     const [videoError, setVideoError] = useState<string | null>(null);
 
+    // デコーダ枯渇防止: ロード制御
+    const { registerLoading, unregisterLoading } = useVideoLoading();
+    const [isLoadRegistered, setIsLoadRegistered] = useState(false);
+    const videoId = `expression-${expression.id}`;
+    const loadRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     useImperativeHandle(ref, () => ({
       play: async () => {
         if (videoRef.current) {
@@ -42,6 +49,43 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
         }
       },
     }));
+
+    // デコーダ枯渇防止: ロード登録制御
+    useEffect(() => {
+      if (isActive) {
+        const tryRegister = () => {
+          if (registerLoading(videoId)) {
+            setIsLoadRegistered(true);
+          } else {
+            // 登録失敗時は300ms後に再試行
+            loadRetryTimerRef.current = setTimeout(tryRegister, 300);
+          }
+        };
+        tryRegister();
+      } else {
+        if (isLoadRegistered) {
+          unregisterLoading(videoId);
+          setIsLoadRegistered(false);
+        }
+        if (loadRetryTimerRef.current) {
+          clearTimeout(loadRetryTimerRef.current);
+          loadRetryTimerRef.current = null;
+        }
+      }
+      return () => {
+        if (loadRetryTimerRef.current) {
+          clearTimeout(loadRetryTimerRef.current);
+          loadRetryTimerRef.current = null;
+        }
+      };
+    }, [isActive, videoId, registerLoading, unregisterLoading]);
+
+    // コンポーネントのアンマウント時に登録解除
+    useEffect(() => {
+      return () => {
+        unregisterLoading(videoId);
+      };
+    }, [videoId, unregisterLoading]);
 
     useEffect(() => {
       setIsVideoLoaded(false);
@@ -89,7 +133,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       <View style={styles.container}>
         {expression.video_url ? (
           <>
-            {isActive ? (
+            {isActive && isLoadRegistered ? (
               <Video
                 ref={videoRef}
                 source={{ uri: expression.video_url }}
@@ -101,7 +145,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
                 onError={handleVideoError}
               />
             ) : null}
-            {(!isActive || !isVideoLoaded || videoError) && expression.scene_image_url && (
+            {(!isActive || !isLoadRegistered || !isVideoLoaded || videoError) && expression.scene_image_url && (
               <Image
                 source={{ uri: expression.scene_image_url }}
                 style={[styles.thumbnail, { marginTop: videoMarginTop }]}
