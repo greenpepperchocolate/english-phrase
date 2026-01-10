@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { Expression } from '../api/types';
@@ -145,13 +145,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
                 onError={handleVideoError}
               />
             ) : null}
-            {(!isActive || !isLoadRegistered || !isVideoLoaded || videoError) && expression.scene_image_url && (
-              <Image
-                source={{ uri: expression.scene_image_url }}
-                style={[styles.thumbnail, { marginTop: videoMarginTop }]}
-                resizeMode="contain"
-              />
-            )}
+            
             <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
               {!isPlaying && (
                 <View style={styles.playIconContainer}>
@@ -185,15 +179,6 @@ const styles = StyleSheet.create({
   video: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
-    marginTop: -80,
-  },
-  thumbnail: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    backgroundColor: '#000000',
     marginTop: -80,
   },
   playPauseArea: {

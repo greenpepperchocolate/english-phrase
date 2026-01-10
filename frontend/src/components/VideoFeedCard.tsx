@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
+import { Alert, Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
 import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -434,13 +434,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                   onError={handleVideoError}
                 />
                 ) : null}
-                {(!isActive || horizontalIndex !== 0 || !isLoadRegistered || !isVideoLoaded || videoError) && phrase.scene_image_url && (
-                  <Image
-                    source={{ uri: phrase.scene_image_url }}
-                    style={[styles.thumbnail, { marginTop: videoMarginTop }]}
-                    resizeMode="contain"
-                  />
-                )}
+                
                 <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
                   {!isPlaying && (
                     <View style={styles.playIconContainer}>
