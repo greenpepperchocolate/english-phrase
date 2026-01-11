@@ -1,7 +1,18 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AVPlaybackStatus, AVPlaybackStatusSuccess, Video, ResizeMode } from 'expo-av';
+import {
+  AVPlaybackStatus,
+  AVPlaybackStatusSuccess,
+  Video,
+  ResizeMode,
+} from 'expo-av';
 import { Expression } from '../api/types';
 import { useVideoLoading } from '../contexts/VideoLoadingContext';
 
@@ -19,7 +30,9 @@ export interface ExpressionVideoCardRef {
   pause: () => void;
 }
 
-function isPlaybackSuccess(status: AVPlaybackStatus): status is AVPlaybackStatusSuccess {
+function isPlaybackSuccess(
+  status: AVPlaybackStatus
+): status is AVPlaybackStatusSuccess {
   return status.isLoaded;
 }
 
@@ -30,6 +43,9 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
     const [videoError, setVideoError] = useState<string | null>(null);
+
+    // アスペクト比管理
+    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
 
     // デコーダ枯渇防止: ロード制御
     const { registerLoading, unregisterLoading } = useVideoLoading();
@@ -90,6 +106,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     useEffect(() => {
       setIsVideoLoaded(false);
       setVideoError(null);
+      setVideoAspectRatio(null); // リセット
     }, [expression.id]);
 
     useEffect(() => {
@@ -129,6 +146,10 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
 
     const videoMarginTop = tabBarHeight > 0 ? tabBarHeight : 0;
 
+    // デフォルト(null)または横長ならCONTAIN、縦長確定ならCOVER
+    const isPortrait = videoAspectRatio !== null && videoAspectRatio < 0.85;
+    const videoResizeMode = isPortrait ? ResizeMode.COVER : ResizeMode.CONTAIN;
+
     return (
       <View style={styles.container}>
         {expression.video_url ? (
@@ -137,20 +158,26 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
               <Video
                 ref={videoRef}
                 source={{ uri: expression.video_url }}
-                style={[styles.video, { marginTop: videoMarginTop }]}
-                resizeMode={ResizeMode.CONTAIN}
+                style={{
+                  width: SCREEN_WIDTH,
+                  height: isPortrait ? SCREEN_HEIGHT - videoMarginTop : SCREEN_HEIGHT,
+                  marginTop: isPortrait ? videoMarginTop : 0,
+                  opacity: videoAspectRatio ? 1 : 0, // アスペクト比確定まで隠す
+                }}
+                resizeMode={videoResizeMode}
                 shouldPlay={isPlaying && !videoError}
                 isLooping
                 onPlaybackStatusUpdate={handlePlaybackStatus}
+                onReadyForDisplay={(event) => {
+                  const { width, height } = event.naturalSize;
+                  if (width && height) {
+                    setVideoAspectRatio(width / height);
+                  }
+                }}
                 onError={handleVideoError}
               />
             ) : null}
-            {/* ローディング表示 */}
-            {isActive && isLoadRegistered && !isVideoLoaded && !videoError && (
-              <View style={[styles.loadingContainer, { marginTop: videoMarginTop }]}>
-                <ActivityIndicator size="large" color="#ffffff" />
-              </View>
-            )}
+
             {/* エラー表示 */}
             {videoError && (
               <View style={[styles.loadingContainer, { marginTop: videoMarginTop }]}>
@@ -170,9 +197,11 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
             <Text style={styles.placeholderText}>No video available</Text>
           </View>
         )}
-        <View style={[styles.textOverlay, { bottom: insets.bottom + 106 }]}>
+        <View style={[styles.textOverlay, { bottom: insets.bottom + 106 }]} pointerEvents="none">
           <Text style={styles.expressionText}>{expression.text}</Text>
-          {showJapanese && <Text style={styles.meaningText}>{expression.meaning}</Text>}
+          {showJapanese && (
+            <Text style={styles.meaningText}>{expression.meaning}</Text>
+          )}
         </View>
       </View>
     );
@@ -187,16 +216,8 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
     backgroundColor: '#000000',
   },
-  video: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-  },
   playPauseArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -214,8 +235,7 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   placeholder: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#0d1b2a',
@@ -224,9 +244,18 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
   },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  errorText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+  },
   textOverlay: {
     position: 'absolute',
-    bottom: 140,
     left: 0,
     right: 0,
     paddingHorizontal: 24,
@@ -260,19 +289,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 8,
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-  },
-  errorText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14,
   },
 });

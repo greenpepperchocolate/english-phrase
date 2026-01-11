@@ -1,20 +1,13 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, View, ViewToken, ViewabilityConfig } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import PagerView from 'react-native-pager-view';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../providers/AuthProvider';
 import { useFeed } from '../hooks/useFeed';
 import { useToggleFavorite } from '../hooks/useToggleFavorite';
 import { useMasteredToggle } from '../hooks/useMasteredToggle';
-import { PhraseSummary } from '../api/types';
 import { VideoFeedCard, VideoFeedCardRef } from './VideoFeedCard';
 import { ErrorFallback } from './ErrorFallback';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// FlatListの外で定義して安定性を確保
-const VIEWABILITY_CONFIG: ViewabilityConfig = {
-  itemVisiblePercentThreshold: 80,
-};
 
 interface Props {
   topic?: string;
@@ -34,6 +27,10 @@ export function FeedList({ topic, isFocused = true }: Props) {
   const activeIndexRef = useRef(0); // 安定したコールバック用
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
   const isFetchingRef = useRef(false);
+  const pagerRef = useRef<PagerView>(null);
+
+  // 方向ロック用: 縦スクロールの有効/無効
+  const [verticalScrollEnabled, setVerticalScrollEnabled] = useState(true);
 
   // 安定したコールバック用のref（10000回スワイプ対応）
   const feedRef = useRef(feed);
@@ -56,20 +53,6 @@ export function FeedList({ topic, isFocused = true }: Props) {
     itemsLengthRef.current = items.length;
   }, [items.length]);
 
-  // 安定したコールバック（依存配列を空にして再生成を防止）
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0) {
-        const index = viewableItems[0].index;
-        if (index !== null && index !== activeIndexRef.current) {
-          setActiveIndex(index);
-        }
-      }
-    },
-    [] // 依存配列を空にして安定化
-  );
-
-  const flatListRef = useRef<FlatList>(null);
   const fetchNextPageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // フェッチ状態を同期的に管理
@@ -117,51 +100,33 @@ export function FeedList({ topic, isFocused = true }: Props) {
     }, 300);
   }, []); // 依存配列を空にして安定化
 
-  const handleEndReached = useCallback(() => {
-    // onEndReachedは複数回呼ばれることがあるため、厳密にチェック
-    if (!feedRef.current.hasNextPage || isFetchingRef.current) {
-      return;
-    }
-    debouncedFetchNextPage();
-  }, [debouncedFetchNextPage]);
+  // PagerViewのページ変更ハンドラ
+  const onPageSelected = useCallback(
+    (e: { nativeEvent: { position: number } }) => {
+      const index = e.nativeEvent.position;
+      if (index !== activeIndexRef.current) {
+        setActiveIndex(index);
+
+        // 最後に近づいたら次のページをプリフェッチ（残り3件）
+        if (index >= itemsLengthRef.current - 3 && feedRef.current.hasNextPage && !isFetchingRef.current) {
+          debouncedFetchNextPage();
+        }
+      }
+    },
+    [debouncedFetchNextPage]
+  );
 
   const handleAutoSwipe = useCallback(() => {
     // 次の動画にスクロール
     const nextIndex = activeIndexRef.current + 1;
     if (nextIndex < itemsLengthRef.current) {
-      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      pagerRef.current?.setPage(nextIndex);
     }
     // 最後に近づいたら次のページをプリフェッチ（残り3件に短縮）
     if (nextIndex >= itemsLengthRef.current - 3 && feedRef.current.hasNextPage && !isFetchingRef.current) {
       debouncedFetchNextPage();
     }
   }, [debouncedFetchNextPage]); // 依存配列を最小化して安定化
-
-  // renderItemをuseCallbackでメモ化（10000回スワイプ対応）
-  // activeIndexの変更でrenderItemが再生成されるが、React.memoにより実際の再レンダリングは最小限
-  const renderItem = useCallback(
-    ({ item, index }: { item: PhraseSummary; index: number }) => (
-      <MemoizedVideoFeedCard
-        ref={(ref) => {
-          if (ref) {
-            videoRefs.current.set(index, ref);
-          } else {
-            videoRefs.current.delete(index);
-          }
-        }}
-        phrase={item}
-        isActive={index === activeIndex && isFocused}
-        isFavorite={item.is_favorite}
-        isMastered={item.is_mastered}
-        onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
-        onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
-        onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
-        onAutoSwipe={handleAutoSwipe}
-        isGuest={tokens?.anonymous}
-      />
-    ),
-    [activeIndex, isFocused, router, toggleFavorite, toggleMastered, handleAutoSwipe, tokens?.anonymous]
-  );
 
   // 初回ロード中のみローディング表示
   if (feed.isLoading && !feed.data) {
@@ -177,61 +142,84 @@ export function FeedList({ topic, isFocused = true }: Props) {
     return <ErrorFallback error={feed.error} onRetry={() => feed.refetch()} />;
   }
 
+  // データがない場合
+  if (items.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.emptyText}>No videos available</Text>
+        <Text style={styles.emptySubtext}>Add some phrases from the admin panel</Text>
+      </View>
+    );
+  }
+
   return (
-    <FlatList
-      ref={flatListRef}
-      data={items}
-      keyExtractor={(item) => String(item.id)}
-      renderItem={renderItem}
-      pagingEnabled
-      snapToInterval={SCREEN_HEIGHT}
-      decelerationRate="fast"
-      showsVerticalScrollIndicator={false}
-      onViewableItemsChanged={onViewableItemsChanged}
-      viewabilityConfig={VIEWABILITY_CONFIG}
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0.5}
-      getItemLayout={(data, index) => ({
-        length: SCREEN_HEIGHT,
-        offset: SCREEN_HEIGHT * index,
-        index,
-      })}
-      // メモリ最適化設定
-      removeClippedSubviews={true}
-      windowSize={1}
-      maxToRenderPerBatch={1}
-      initialNumToRender={1}
-      updateCellsBatchingPeriod={50}
-      ListEmptyComponent={() => (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>No videos available</Text>
-          <Text style={styles.emptySubtext}>Add some phrases from the admin panel</Text>
+    <View style={styles.container}>
+      <PagerView
+        ref={pagerRef}
+        style={styles.pager}
+        initialPage={0}
+        orientation="vertical"
+        onPageSelected={onPageSelected}
+        offscreenPageLimit={1}
+        scrollEnabled={verticalScrollEnabled}
+        overdrag={true}
+      >
+        {items.map((item, index) => (
+          <View key={String(item.id)} style={styles.page} collapsable={false}>
+            <MemoizedVideoFeedCard
+              ref={(ref) => {
+                if (ref) {
+                  videoRefs.current.set(index, ref);
+                } else {
+                  videoRefs.current.delete(index);
+                }
+              }}
+              phrase={item}
+              isActive={index === activeIndex && isFocused}
+              isFavorite={item.is_favorite}
+              isMastered={item.is_mastered}
+              onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
+              onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
+              onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
+              onAutoSwipe={handleAutoSwipe}
+              isGuest={tokens?.anonymous}
+              onVerticalScrollEnabledChange={setVerticalScrollEnabled}
+            />
+          </View>
+        ))}
+      </PagerView>
+
+      {/* 次のページ読み込み中のインジケーター */}
+      {feed.isFetchingNextPage && (
+        <View style={styles.loadingFooter}>
+          <ActivityIndicator size="small" color="#ffffff" />
         </View>
       )}
-      ListFooterComponent={() =>
-        feed.isFetchingNextPage ? (
-          <View style={styles.loadingFooter}>
-            <ActivityIndicator size="small" color="#ffffff" />
-          </View>
-        ) : null
-      }
-    />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  pager: {
+    flex: 1,
+  },
+  page: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000000',
   },
-  errorText: {
-    color: '#ffffff',
-    fontSize: 16,
-  },
   empty: {
-    height: SCREEN_HEIGHT,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000000',
@@ -249,9 +237,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loadingFooter: {
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    backgroundColor: '#000000',
   },
 });

@@ -40,7 +40,7 @@ export function PhraseCard({ phrase, onPress, isFavorite, onToggleFavorite }: Pr
             source={{ uri: phrase.video_url }}
             style={styles.video}
             resizeMode={ResizeMode.COVER}
-            useNativeControls
+            isLooping
             onPlaybackStatusUpdate={handlePlaybackStatus}
           />
         ) : (

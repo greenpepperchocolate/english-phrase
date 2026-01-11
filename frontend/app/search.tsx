@@ -3,24 +3,19 @@ import {
   View,
   TextInput,
   StyleSheet,
-  FlatList,
   ActivityIndicator,
   Text,
-  Dimensions,
-  ViewToken,
   Pressable,
 } from 'react-native';
+import PagerView from 'react-native-pager-view';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/providers/AuthProvider';
 import { useSearch } from '../src/hooks/useSearch';
 import { useToggleFavorite } from '../src/hooks/useToggleFavorite';
 import { useMasteredToggle } from '../src/hooks/useMasteredToggle';
-import { PhraseSummary } from '../src/api/types';
 import { VideoFeedCard, VideoFeedCardRef } from '../src/components/VideoFeedCard';
 import { ErrorFallback } from '../src/components/ErrorFallback';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -34,6 +29,12 @@ export default function SearchScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFocused, setIsFocused] = useState(true);
   const videoRefs = useRef<Map<number, VideoFeedCardRef>>(new Map());
+  const pagerRef = useRef<PagerView>(null);
+  const activeIndexRef = useRef(0);
+  const itemsLengthRef = useRef(0);
+
+  // 方向ロック用: 縦スクロールの有効/無効
+  const [verticalScrollEnabled, setVerticalScrollEnabled] = useState(true);
 
   // 画面がフォーカスされているかを検出
   useFocusEffect(
@@ -47,35 +48,41 @@ export default function SearchScreen() {
 
   const items = useMemo(() => search.data?.pages.flatMap((page) => page.results) ?? [], [search.data]);
 
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0) {
-        const index = viewableItems[0].index;
-        if (index !== null && index !== activeIndex) {
-          setActiveIndex(index);
+  // itemsの長さを同期
+  useMemo(() => {
+    itemsLengthRef.current = items.length;
+  }, [items.length]);
+
+  // activeIndexRefを同期
+  useMemo(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  // PagerViewのページ変更ハンドラ
+  const onPageSelected = useCallback(
+    (e: { nativeEvent: { position: number } }) => {
+      const index = e.nativeEvent.position;
+      if (index !== activeIndexRef.current) {
+        setActiveIndex(index);
+
+        // 最後に近づいたら次のページをプリフェッチ
+        if (index >= itemsLengthRef.current - 3 && search.hasNextPage && !search.isFetchingNextPage) {
+          search.fetchNextPage();
         }
       }
     },
-    [activeIndex]
+    [search]
   );
 
-  const flatListRef = useRef<FlatList>(null);
-
-  const handleEndReached = () => {
-    if (search.hasNextPage && !search.isFetchingNextPage) {
-      search.fetchNextPage();
-    }
-  };
-
   const handleAutoSwipe = useCallback(() => {
-    const nextIndex = activeIndex + 1;
-    if (nextIndex < items.length) {
-      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+    const nextIndex = activeIndexRef.current + 1;
+    if (nextIndex < itemsLengthRef.current) {
+      pagerRef.current?.setPage(nextIndex);
     }
-    if (nextIndex >= items.length - 5 && search.hasNextPage && !search.isFetchingNextPage) {
+    if (nextIndex >= itemsLengthRef.current - 5 && search.hasNextPage && !search.isFetchingNextPage) {
       search.fetchNextPage();
     }
-  }, [activeIndex, items.length, search]);
+  }, [search]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -83,27 +90,6 @@ export default function SearchScreen() {
       setActiveIndex(0);
     }
   };
-
-  const renderItem = ({ item, index }: { item: PhraseSummary; index: number }) => (
-    <VideoFeedCard
-      ref={(ref) => {
-        if (ref) {
-          videoRefs.current.set(index, ref);
-        } else {
-          videoRefs.current.delete(index);
-        }
-      }}
-      phrase={item}
-      isActive={index === activeIndex && isFocused}
-      isFavorite={item.is_favorite}
-      isMastered={item.is_mastered}
-      onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
-      onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
-      onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
-      onAutoSwipe={handleAutoSwipe}
-      isGuest={tokens?.anonymous}
-    />
-  );
 
   const handleClose = () => {
     router.back();
@@ -135,39 +121,49 @@ export default function SearchScreen() {
           <Text style={styles.emptySubtext}>Try searching for different words</Text>
         </View>
       ) : (
-        <FlatList
-          ref={flatListRef}
-          data={items}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderItem}
-          pagingEnabled
-          snapToInterval={SCREEN_HEIGHT}
-          decelerationRate="fast"
-          showsVerticalScrollIndicator={false}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={{
-            itemVisiblePercentThreshold: 80,
-          }}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.3}
-          getItemLayout={(data, index) => ({
-            length: SCREEN_HEIGHT,
-            offset: SCREEN_HEIGHT * index,
-            index,
-          })}
-          removeClippedSubviews={true}
-          windowSize={3}
-          maxToRenderPerBatch={2}
-          initialNumToRender={2}
-          updateCellsBatchingPeriod={50}
-          ListFooterComponent={() =>
-            search.isFetchingNextPage ? (
-              <View style={styles.loadingFooter}>
-                <ActivityIndicator size="small" color="#ffffff" />
+        <View style={styles.pagerContainer}>
+          <PagerView
+            ref={pagerRef}
+            style={styles.pager}
+            initialPage={0}
+            orientation="vertical"
+            onPageSelected={onPageSelected}
+            offscreenPageLimit={1}
+            scrollEnabled={verticalScrollEnabled}
+            overdrag={true}
+          >
+            {items.map((item, index) => (
+              <View key={String(item.id)} style={styles.page} collapsable={false}>
+                <VideoFeedCard
+                  ref={(ref) => {
+                    if (ref) {
+                      videoRefs.current.set(index, ref);
+                    } else {
+                      videoRefs.current.delete(index);
+                    }
+                  }}
+                  phrase={item}
+                  isActive={index === activeIndex && isFocused}
+                  isFavorite={item.is_favorite}
+                  isMastered={item.is_mastered}
+                  onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
+                  onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
+                  onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
+                  onAutoSwipe={handleAutoSwipe}
+                  isGuest={tokens?.anonymous}
+                  onVerticalScrollEnabledChange={setVerticalScrollEnabled}
+                />
               </View>
-            ) : null
-          }
-        />
+            ))}
+          </PagerView>
+
+          {/* 次のページ読み込み中のインジケーター */}
+          {search.isFetchingNextPage && (
+            <View style={styles.loadingFooter}>
+              <ActivityIndicator size="small" color="#ffffff" />
+            </View>
+          )}
+        </View>
       )}
 
       {/* 検索バーをオーバーレイとして表示 */}
@@ -204,6 +200,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  pagerContainer: {
+    flex: 1,
+  },
+  pager: {
+    flex: 1,
+  },
+  page: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   searchBar: {
     position: 'absolute',
@@ -279,10 +286,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#000000',
   },
-  errorText: {
-    color: '#ffffff',
-    fontSize: 16,
-  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -307,9 +310,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loadingFooter: {
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    backgroundColor: '#000000',
   },
 });
