@@ -111,6 +111,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const autoSwipeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
       null
     );
+    const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // デコーダ枯渇防止: ロード制御
     const { registerLoading, unregisterLoading } = useVideoLoading();
@@ -223,6 +224,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
         clearTimeout(autoSwipeTimerRef.current);
         autoSwipeTimerRef.current = null;
       }
+      if (replayTimerRef.current) {
+        clearTimeout(replayTimerRef.current);
+        replayTimerRef.current = null;
+      }
       setHorizontalIndex(0);
       playCountRef.current = 0;
       setShouldPlayVideo(true);
@@ -242,6 +247,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
         if (autoSwipeTimerRef.current) {
           clearTimeout(autoSwipeTimerRef.current);
           autoSwipeTimerRef.current = null;
+        }
+        if (replayTimerRef.current) {
+          clearTimeout(replayTimerRef.current);
+          replayTimerRef.current = null;
         }
       }
     }, [isActive]);
@@ -296,11 +305,22 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
         if (onAutoSwipe) {
           if (autoSwipeTimerRef.current) clearTimeout(autoSwipeTimerRef.current);
+          // 1秒静止してから次の動画へ
           autoSwipeTimerRef.current = setTimeout(() => {
             autoSwipeTimerRef.current = null;
             onAutoSwipe();
-          }, 500);
+          }, 1000);
         }
+      } else {
+        // リピート回数に達していない場合: 1秒静止してからリプレイ
+        if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
+        replayTimerRef.current = setTimeout(() => {
+          replayTimerRef.current = null;
+          if (videoRef.current && isActive && isPlaying) {
+            videoRef.current.setPositionAsync(0);
+            videoRef.current.playAsync();
+          }
+        }, 1000);
       }
     };
 
@@ -394,14 +414,16 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                     ref={videoRef}
                     source={{ uri: phrase.video_url }}
                     style={{
+                      position: 'absolute',
                       width: SCREEN_WIDTH,
                       height: isPortrait ? SCREEN_HEIGHT - videoTopOffset : SCREEN_HEIGHT,
-                      marginTop: isPortrait ? videoTopOffset : 0,
+                      top: isPortrait ? videoTopOffset : 0,
+                      left: 0,
                       opacity: videoAspectRatio ? 1 : 0, // アスペクト比確定まで隠す（Layout Shift防止）
                     }}
                     resizeMode={videoResizeMode}
                     shouldPlay={isPlaying && shouldPlayVideo && !videoError}
-                    isLooping
+                    isLooping={false}
                     onPlaybackStatusUpdate={handlePlaybackStatus}
                     onReadyForDisplay={(event) => {
                       const { width, height } = event.naturalSize;

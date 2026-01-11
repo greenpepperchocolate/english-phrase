@@ -52,6 +52,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     const [isLoadRegistered, setIsLoadRegistered] = useState(false);
     const videoId = `expression-${expression.id}`;
     const loadRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useImperativeHandle(ref, () => ({
       play: async () => {
@@ -104,6 +105,10 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     }, [videoId, unregisterLoading]);
 
     useEffect(() => {
+      if (replayTimerRef.current) {
+        clearTimeout(replayTimerRef.current);
+        replayTimerRef.current = null;
+      }
       setIsVideoLoaded(false);
       setVideoError(null);
       setVideoAspectRatio(null); // リセット
@@ -115,6 +120,10 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
         setIsVideoLoaded(false);
       } else {
         videoRef.current?.pauseAsync();
+        if (replayTimerRef.current) {
+          clearTimeout(replayTimerRef.current);
+          replayTimerRef.current = null;
+        }
       }
     }, [isActive]);
 
@@ -132,6 +141,18 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     const handlePlaybackStatus = (status: AVPlaybackStatus) => {
       if (isPlaybackSuccess(status) && !isVideoLoaded) {
         setIsVideoLoaded(true);
+      }
+
+      // 動画終了時: 1秒静止してからリプレイ
+      if (isPlaybackSuccess(status) && status.didJustFinish) {
+        if (replayTimerRef.current) clearTimeout(replayTimerRef.current);
+        replayTimerRef.current = setTimeout(() => {
+          replayTimerRef.current = null;
+          if (videoRef.current && isActive && isPlaying) {
+            videoRef.current.setPositionAsync(0);
+            videoRef.current.playAsync();
+          }
+        }, 1000);
       }
     };
 
@@ -159,14 +180,16 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
                 ref={videoRef}
                 source={{ uri: expression.video_url }}
                 style={{
+                  position: 'absolute',
                   width: SCREEN_WIDTH,
                   height: isPortrait ? SCREEN_HEIGHT - videoMarginTop : SCREEN_HEIGHT,
-                  marginTop: isPortrait ? videoMarginTop : 0,
+                  top: isPortrait ? videoMarginTop : 0,
+                  left: 0,
                   opacity: videoAspectRatio ? 1 : 0, // アスペクト比確定まで隠す
                 }}
                 resizeMode={videoResizeMode}
                 shouldPlay={isPlaying && !videoError}
-                isLooping
+                isLooping={false}
                 onPlaybackStatusUpdate={handlePlaybackStatus}
                 onReadyForDisplay={(event) => {
                   const { width, height } = event.naturalSize;
