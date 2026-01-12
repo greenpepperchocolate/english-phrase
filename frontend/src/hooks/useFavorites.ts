@@ -40,7 +40,7 @@ export function useFavorites() {
   const randomSeed = useMemo(() => getSessionFavoritesSeed(), []);
 
   return useInfiniteQuery<FavoritesResponse, Error>({
-    queryKey: ['favorites', randomSeed],
+    queryKey: ['favorites'],
     queryFn: async ({ pageParam }) => {
       const search = new URLSearchParams({ limit: '20' });
       if (pageParam && pageParam !== 1) {

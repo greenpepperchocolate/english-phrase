@@ -14,9 +14,6 @@ interface Props {
   isFocused?: boolean;
 }
 
-// メモ化されたアイテムコンポーネント
-const MemoizedVideoFeedCard = React.memo(VideoFeedCard);
-
 export function FeedList({ topic, isFocused = true }: Props) {
   const router = useRouter();
   const { tokens } = useAuth();
@@ -166,7 +163,7 @@ export function FeedList({ topic, isFocused = true }: Props) {
       >
         {items.map((item, index) => (
           <View key={String(item.id)} style={styles.page} collapsable={false}>
-            <MemoizedVideoFeedCard
+            <VideoFeedCard
               ref={(ref) => {
                 if (ref) {
                   videoRefs.current.set(index, ref);

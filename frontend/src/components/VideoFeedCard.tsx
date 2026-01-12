@@ -9,6 +9,7 @@
 } from 'react';
 import {
   Alert,
+  Animated,
   Dimensions,
   StyleSheet,
   Text,
@@ -112,6 +113,13 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       null
     );
     const replayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // キラキラエフェクト用のアニメーション値
+    const sparkleAnim1 = useRef(new Animated.Value(0)).current;
+    const sparkleAnim2 = useRef(new Animated.Value(0)).current;
+    const sparkleAnim3 = useRef(new Animated.Value(0)).current;
+    const pulseAnim = useRef(new Animated.Value(0)).current;
+    const [showSparkle, setShowSparkle] = useState(false);
 
     // デコーダ枯渇防止: ロード制御
     const { registerLoading, unregisterLoading } = useVideoLoading();
@@ -352,6 +360,53 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       onToggleFavorite(!isFavorite);
     };
 
+    // キラキラエフェクトを再生
+    const playSparkleEffect = useCallback(() => {
+      setShowSparkle(true);
+      sparkleAnim1.setValue(0);
+      sparkleAnim2.setValue(0);
+      sparkleAnim3.setValue(0);
+      pulseAnim.setValue(0);
+
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(sparkleAnim1, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.delay(150),
+          Animated.timing(sparkleAnim2, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.delay(300),
+          Animated.timing(sparkleAnim3, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start(() => {
+        setShowSparkle(false);
+      });
+    }, [sparkleAnim1, sparkleAnim2, sparkleAnim3, pulseAnim]);
+
     const handleMasteredPress = () => {
       if (isGuest) {
         Alert.alert(
@@ -363,6 +418,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           ]
         );
         return;
+      }
+      // Masterにする時だけキラキラエフェクトを再生
+      if (!isMastered) {
+        playSparkleEffect();
       }
       onToggleMastered(!isMastered);
     };
@@ -459,14 +518,222 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
             <View style={styles.overlay} pointerEvents="box-none">
               <View style={[styles.buttonGroup, { bottom: insets.bottom + 46 }]} pointerEvents="box-none">
-                <Pressable
-                  onPress={handleMasteredPress}
-                  style={[styles.masteredButton, isMastered && styles.masteredButtonActive]}
-                >
-                  <Text style={[styles.masteredButtonText, isMastered && styles.masteredButtonTextActive]}>
-                    Master
-                  </Text>
-                </Pressable>
+                <View style={styles.masteredButtonContainer}>
+                  <Pressable
+                    onPress={handleMasteredPress}
+                    style={[styles.masteredButton, isMastered && styles.masteredButtonActive]}
+                  >
+                    <Text style={[styles.masteredButtonText, isMastered && styles.masteredButtonTextActive]}>
+                      Master
+                    </Text>
+                  </Pressable>
+                  {/* キラキラエフェクト - 派手バージョン */}
+                  {showSparkle && (
+                    <>
+                      {/* パルス効果 - より大きく */}
+                      <Animated.View
+                        style={[
+                          styles.pulseGlow,
+                          {
+                            opacity: pulseAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 1],
+                            }),
+                            transform: [{
+                              scale: pulseAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [1, 2.5],
+                              }),
+                            }],
+                          },
+                        ]}
+                      />
+                      {/* 第1波 - 大きな星 (金/青/ピンク) */}
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim1.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -12 }, { translateY: -12 },
+                              { scale: sparkleAnim1.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.5, 2.5, 0.8] }) },
+                              { translateX: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, -60] }) },
+                              { translateY: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, -50] }) },
+                              { rotate: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextLarge, { color: '#fbbf24' }]}>✦</Text>
+                      </Animated.View>
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim1.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -12 }, { translateY: -12 },
+                              { scale: sparkleAnim1.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.5, 2.2, 0.6] }) },
+                              { translateX: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, 65] }) },
+                              { translateY: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, -40] }) },
+                              { rotate: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-150deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextLarge, { color: '#60a5fa' }]}>★</Text>
+                      </Animated.View>
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim1.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -12 }, { translateY: -12 },
+                              { scale: sparkleAnim1.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.5, 2.0, 0.5] }) },
+                              { translateX: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, -50] }) },
+                              { translateY: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, 45] }) },
+                              { rotate: sparkleAnim1.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '120deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextLarge, { color: '#f472b6' }]}>✧</Text>
+                      </Animated.View>
+                      {/* 第2波 - 中サイズの星 */}
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim2.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -8 }, { translateY: -8 },
+                              { scale: sparkleAnim2.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.3, 1.8, 0.4] }) },
+                              { translateX: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, 55] }) },
+                              { translateY: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, 35] }) },
+                              { rotate: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-90deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextMedium, { color: '#fbbf24' }]}>✦</Text>
+                      </Animated.View>
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim2.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -8 }, { translateY: -8 },
+                              { scale: sparkleAnim2.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.3, 1.6, 0.3] }) },
+                              { translateX: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, -70] }) },
+                              { translateY: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, 10] }) },
+                              { rotate: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '200deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextMedium, { color: '#ffffff' }]}>★</Text>
+                      </Animated.View>
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim2.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -8 }, { translateY: -8 },
+                              { scale: sparkleAnim2.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.3, 1.5, 0.3] }) },
+                              { translateX: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) },
+                              { translateY: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, -65] }) },
+                              { rotate: sparkleAnim2.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '150deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextMedium, { color: '#60a5fa' }]}>✧</Text>
+                      </Animated.View>
+                      {/* 第3波 - 小さな星 */}
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim3.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -6 }, { translateY: -6 },
+                              { scale: sparkleAnim3.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.2, 1.4, 0.2] }) },
+                              { translateX: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, -40] }) },
+                              { translateY: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, -70] }) },
+                              { rotate: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '270deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextSmall, { color: '#fbbf24' }]}>⋆</Text>
+                      </Animated.View>
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim3.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -6 }, { translateY: -6 },
+                              { scale: sparkleAnim3.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.2, 1.3, 0.2] }) },
+                              { translateX: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, 75] }) },
+                              { translateY: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, -20] }) },
+                              { rotate: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-180deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextSmall, { color: '#f472b6' }]}>✦</Text>
+                      </Animated.View>
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim3.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -6 }, { translateY: -6 },
+                              { scale: sparkleAnim3.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.2, 1.2, 0.2] }) },
+                              { translateX: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, -25] }) },
+                              { translateY: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, 60] }) },
+                              { rotate: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextSmall, { color: '#ffffff' }]}>★</Text>
+                      </Animated.View>
+                      <Animated.View
+                        style={[
+                          styles.sparkle,
+                          { top: '50%', left: '50%' },
+                          {
+                            opacity: sparkleAnim3.interpolate({ inputRange: [0, 0.2, 0.7, 1], outputRange: [0, 1, 0.9, 0] }),
+                            transform: [
+                              { translateX: -6 }, { translateY: -6 },
+                              { scale: sparkleAnim3.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.2, 1.1, 0.2] }) },
+                              { translateX: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, 50] }) },
+                              { translateY: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: [0, 55] }) },
+                              { rotate: sparkleAnim3.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-120deg'] }) },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.sparkleTextSmall, { color: '#60a5fa' }]}>✧</Text>
+                      </Animated.View>
+                    </>
+                  )}
+                </View>
 
                 <Pressable
                   onPress={handleFavoritePress}

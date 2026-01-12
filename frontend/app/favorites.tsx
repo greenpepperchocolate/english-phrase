@@ -99,7 +99,7 @@ export default function FavoritesScreen() {
         </View>
         {/* Backボタン */}
         <Pressable
-          style={[styles.backButton, { top: insets.top + 10 }]}
+          style={[styles.backButton, { top: insets.top + 12 }]}
           onPress={() => router.back()}
         >
           <View style={styles.backButtonInner}>
@@ -135,7 +135,7 @@ export default function FavoritesScreen() {
               }}
               phrase={item}
               isActive={index === activeIndex && isFocused}
-              isFavorite={true}
+              isFavorite={item.is_favorite}
               isMastered={item.is_mastered}
               onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
               onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
@@ -157,7 +157,7 @@ export default function FavoritesScreen() {
 
       {/* Backボタン */}
       <Pressable
-        style={[styles.backButton, { top: insets.top + 10 }]}
+        style={[styles.backButton, { top: insets.top + 12 }]}
         onPress={() => router.back()}
       >
         <View style={styles.backButtonInner}>
@@ -206,16 +206,17 @@ const styles = StyleSheet.create({
   },
   backButtonIcon: {
     color: '#ffffff',
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '300',
-    marginLeft: -2,
-    marginTop: -2,
+    lineHeight: 24,
+    includeFontPadding: false,
   },
   backButtonText: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '500',
-    marginLeft: 2,
+    marginLeft: 4,
+    lineHeight: 14,
   },
   loading: {
     flex: 1,

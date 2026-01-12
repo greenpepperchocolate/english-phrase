@@ -60,10 +60,28 @@ export function useToggleFavorite() {
       );
 
       // お気に入りキャッシュを楽観的に更新
-      queryClient.setQueriesData<InfiniteData<FeedPage>>(
-        { queryKey: ['favorites'] },
-        (old) => updatePhraseInCache(old, payload.phraseId, { is_favorite: payload.on })
-      );
+      if (payload.on) {
+        // お気に入り追加時は状態を更新
+        queryClient.setQueriesData<InfiniteData<FeedPage>>(
+          { queryKey: ['favorites'] },
+          (old) => updatePhraseInCache(old, payload.phraseId, { is_favorite: payload.on })
+        );
+      } else {
+        // お気に入り削除時はアイテムをリストから除外
+        queryClient.setQueriesData<InfiniteData<FeedPage>>(
+          { queryKey: ['favorites'] },
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                results: page.results.filter((phrase) => phrase.id !== payload.phraseId),
+              })),
+            };
+          }
+        );
+      }
 
       // 検索キャッシュも楽観的に更新
       queryClient.setQueriesData<InfiniteData<FeedPage>>(
