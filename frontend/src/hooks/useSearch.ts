@@ -31,7 +31,7 @@ interface UseSearchOptions {
 export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
   const { authorizedFetch } = useAuth();
 
-  // 日替わりのランダムシードを使用（検索は"all"として扱う）
+  // セッションごとのランダムシードを使用（検索は"all"として扱う）
   const { seed: randomSeed, isLoading: isSeedLoading } = useFeedSeed();
 
   return useInfiniteQuery<SearchResponse, Error>({

@@ -20,7 +20,7 @@ function extractPageNumber(next: string | null): number | undefined {
 export function useFeed(params: { topic?: string; difficulty?: string; pageSize?: number }) {
   const { authorizedFetch } = useAuth();
 
-  // 日替わり・トピック/難易度別のランダムシードを使用
+  // セッションごと・トピック/難易度別のランダムシードを使用
   const { seed: randomSeed, isLoading: isSeedLoading } = useFeedSeed(params.topic, params.difficulty);
 
   return useInfiniteQuery<CursorPaginatedResponse<PhraseSummary>, Error>({
