@@ -280,7 +280,7 @@ def send_contact_email(user, subject_type: str, message_text: str) -> None:
 送信日時: {timezone.now().strftime('%Y年%m月%d日 %H:%M:%S')}
 
 --- メッセージ ---
-{message}
+{message_text}
 ---
 
 ※このメールは映単語アプリの問い合わせフォームから自動送信されています。
@@ -312,7 +312,7 @@ def send_contact_email(user, subject_type: str, message_text: str) -> None:
 
         <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #1d4ed8; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #1b263b;">メッセージ:</h3>
-            <p style="white-space: pre-wrap; margin: 0;">{message}</p>
+            <p style="white-space: pre-wrap; margin: 0;">{message_text}</p>
         </div>
 
         <p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 10px;">

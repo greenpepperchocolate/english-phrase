@@ -99,7 +99,7 @@ export default function FavoritesScreen() {
         </View>
         {/* Backボタン */}
         <Pressable
-          style={[styles.backButton, { top: insets.top + 12 }]}
+          style={[styles.backButton, { top: insets.top }]}
           onPress={() => router.back()}
         >
           <View style={styles.backButtonInner}>
@@ -157,7 +157,7 @@ export default function FavoritesScreen() {
 
       {/* Backボタン */}
       <Pressable
-        style={[styles.backButton, { top: insets.top + 12 }]}
+        style={[styles.backButton, { top: insets.top }]}
         onPress={() => router.back()}
       >
         <View style={styles.backButtonInner}>
