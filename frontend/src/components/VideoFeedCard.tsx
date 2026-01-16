@@ -121,6 +121,9 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const pulseAnim = useRef(new Animated.Value(0)).current;
     const [showSparkle, setShowSparkle] = useState(false);
 
+    // ロードオーバーレイのフェードアウト用
+    const overlayOpacity = useRef(new Animated.Value(1)).current;
+
     // デコーダ枯渇防止: ロード制御
     const { registerLoading, unregisterLoading } = useVideoLoading();
     const [isLoadRegistered, setIsLoadRegistered] = useState(false);
@@ -242,8 +245,22 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       setIsVideoLoaded(false);
       setVideoError(null);
       setIsLandscape(null);
+      overlayOpacity.setValue(1);
       scrollViewRef.current?.scrollTo({ x: 0, animated: false });
-    }, [phrase.id]);
+    }, [phrase.id, overlayOpacity]);
+
+    // オーバーレイのフェードアウト
+    useEffect(() => {
+      if (isVideoLoaded) {
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 160,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        overlayOpacity.setValue(1);
+      }
+    }, [isVideoLoaded, overlayOpacity]);
 
     useEffect(() => {
       if (isActive) {
@@ -462,37 +479,43 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           <View style={styles.container}>
             {phrase.video_url ? (
               <>
-                {isActive && horizontalIndex === 0 && isLoadRegistered ? (
-                  <Video
-                    key={`${phrase.id}-${isLandscape === null ? 'detect' : isLandscape ? 'land' : 'port'}`}
-                    ref={videoRef}
-                    source={{ uri: phrase.video_url }}
-                    style={{
-                      position: 'absolute',
-                      width: SCREEN_WIDTH,
-                      height: SCREEN_HEIGHT - tabBarHeight,
-                      top: tabBarHeight,
-                      left: 0,
-                      opacity: isLandscape !== null && isVideoLoaded ? 1 : 0,
-                    }}
-                    resizeMode={isLandscape === true ? ResizeMode.CONTAIN : ResizeMode.COVER}
-                    shouldPlay={isLandscape !== null && isPlaying && shouldPlayVideo && !videoError}
-                    isLooping={false}
-                    onPlaybackStatusUpdate={handlePlaybackStatus}
-                    onReadyForDisplay={(e: any) => {
-                      const ns = e?.naturalSize;
-                      if (ns && isLandscape === null) {
-                        const { width, height, orientation } = ns;
-                        const landscape =
-                          orientation === 'landscape' ||
-                          (width > 0 && height > 0 && width / height > 1.05);
-                        setIsLandscape(landscape);
-                        return; // 再マウント後にisVideoLoadedをtrueにする
-                      }
-                      setIsVideoLoaded(true);
-                    }}
-                    onError={handleVideoError}
-                  />
+                {isActive && horizontalIndex === 0 ? (
+                  <>
+                    <Video
+                      key={phrase.id}
+                      ref={videoRef}
+                      source={{ uri: phrase.video_url }}
+                      style={{
+                        position: 'absolute',
+                        width: SCREEN_WIDTH,
+                        height: SCREEN_HEIGHT - tabBarHeight,
+                        top: tabBarHeight,
+                        left: 0,
+                      }}
+                      resizeMode={isLandscape === false ? ResizeMode.COVER : ResizeMode.CONTAIN}
+                      shouldPlay={isLoadRegistered && isPlaying && shouldPlayVideo && !videoError}
+                      isLooping={false}
+                      onPlaybackStatusUpdate={handlePlaybackStatus}
+                      onReadyForDisplay={(e: any) => {
+                        const ns = e?.naturalSize;
+                        if (ns && isLandscape === null) {
+                          const { width, height, orientation } = ns;
+                          const landscape =
+                            orientation === 'landscape' ||
+                            (width > 0 && height > 0 && width / height > 1.05);
+                          setIsLandscape(landscape);
+                        }
+                        setIsVideoLoaded(true);
+                      }}
+                      onError={handleVideoError}
+                    />
+                    {!videoError && (
+                      <Animated.View
+                        pointerEvents="none"
+                        style={[styles.loadingOverlay, { opacity: overlayOpacity }]}
+                      />
+                    )}
+                  </>
                 ) : null}
 
                 <TapGestureHandler
@@ -1103,6 +1126,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000000',
   },
   errorText: {
