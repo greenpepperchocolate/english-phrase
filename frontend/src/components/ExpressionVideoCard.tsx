@@ -43,9 +43,8 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
     const [videoError, setVideoError] = useState<string | null>(null);
+    const [isLandscape, setIsLandscape] = useState<boolean | null>(null);
 
-    // アスペクト比管理
-    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
 
     // デコーダ枯渇防止: ロード制御
     const { registerLoading, unregisterLoading } = useVideoLoading();
@@ -111,7 +110,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       }
       setIsVideoLoaded(false);
       setVideoError(null);
-      setVideoAspectRatio(null); // リセット
+      setIsLandscape(null);
     }, [expression.id]);
 
     useEffect(() => {
@@ -165,37 +164,38 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       setVideoError(error);
     };
 
-    const videoMarginTop = tabBarHeight > 0 ? tabBarHeight : 0;
-
-    // デフォルト(null)または横長ならCONTAIN、縦長確定ならCOVER
-    const isPortrait = videoAspectRatio !== null && videoAspectRatio < 0.85;
-    const videoResizeMode = isPortrait ? ResizeMode.COVER : ResizeMode.CONTAIN;
-
     return (
       <View style={styles.container}>
         {expression.video_url ? (
           <>
             {isActive && isLoadRegistered ? (
               <Video
+                key={`${expression.id}-${isLandscape === null ? 'detect' : isLandscape ? 'land' : 'port'}`}
                 ref={videoRef}
                 source={{ uri: expression.video_url }}
                 style={{
                   position: 'absolute',
                   width: SCREEN_WIDTH,
-                  height: isPortrait ? SCREEN_HEIGHT - videoMarginTop : SCREEN_HEIGHT,
-                  top: isPortrait ? videoMarginTop : 0,
+                  height: SCREEN_HEIGHT - tabBarHeight,
+                  top: tabBarHeight,
                   left: 0,
-                  opacity: videoAspectRatio ? 1 : 0, // アスペクト比確定まで隠す
+                  opacity: isLandscape !== null && isVideoLoaded ? 1 : 0,
                 }}
-                resizeMode={videoResizeMode}
-                shouldPlay={isPlaying && !videoError}
+                resizeMode={isLandscape === true ? ResizeMode.CONTAIN : ResizeMode.COVER}
+                shouldPlay={isLandscape !== null && isPlaying && !videoError}
                 isLooping={false}
                 onPlaybackStatusUpdate={handlePlaybackStatus}
-                onReadyForDisplay={(event) => {
-                  const { width, height } = event.naturalSize;
-                  if (width && height) {
-                    setVideoAspectRatio(width / height);
+                onReadyForDisplay={(e: any) => {
+                  const ns = e?.naturalSize;
+                  if (ns && isLandscape === null) {
+                    const { width, height, orientation } = ns;
+                    const landscape =
+                      orientation === 'landscape' ||
+                      (width > 0 && height > 0 && width / height > 1.05);
+                    setIsLandscape(landscape);
+                    return; // 再マウント後にisVideoLoadedをtrueにする
                   }
+                  setIsVideoLoaded(true);
                 }}
                 onError={handleVideoError}
               />
@@ -203,7 +203,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
 
             {/* エラー表示 */}
             {videoError && (
-              <View style={[styles.loadingContainer, { marginTop: videoMarginTop }]}>
+              <View style={styles.loadingContainer}>
                 <Text style={styles.errorText}>動画を読み込めませんでした</Text>
               </View>
             )}

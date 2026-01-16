@@ -96,6 +96,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
     const [videoError, setVideoError] = useState<string | null>(null);
+    const [isLandscape, setIsLandscape] = useState<boolean | null>(null);
 
     const { settingsQuery } = useUserSettings();
     const playCountRef = useRef(0);
@@ -105,7 +106,6 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const [horizontalIndex, setHorizontalIndex] = useState(0);
     const horizontalIndexRef = useRef(0);
 
-    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
     const [shouldPlayVideo, setShouldPlayVideo] = useState(true);
     const [tabBarHeight, setTabBarHeight] = useState(0);
 
@@ -241,7 +241,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       setShouldPlayVideo(true);
       setIsVideoLoaded(false);
       setVideoError(null);
-      setVideoAspectRatio(null); // アスペクト比リセット
+      setIsLandscape(null);
       scrollViewRef.current?.scrollTo({ x: 0, animated: false });
     }, [phrase.id]);
 
@@ -458,37 +458,38 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       index: number;
     }) => {
       if (item.type === 'phrase') {
-        const videoTopOffset = hasExpressions && tabBarHeight > 0 ? tabBarHeight : 0;
-
-        // アスペクト比判定: ロードされるまで null
-        const isPortrait = videoAspectRatio !== null && videoAspectRatio < 0.85;
-        const videoResizeMode = isPortrait ? ResizeMode.COVER : ResizeMode.CONTAIN;
-
         return (
           <View style={styles.container}>
             {phrase.video_url ? (
               <>
                 {isActive && horizontalIndex === 0 && isLoadRegistered ? (
                   <Video
+                    key={`${phrase.id}-${isLandscape === null ? 'detect' : isLandscape ? 'land' : 'port'}`}
                     ref={videoRef}
                     source={{ uri: phrase.video_url }}
                     style={{
                       position: 'absolute',
                       width: SCREEN_WIDTH,
-                      height: isPortrait ? SCREEN_HEIGHT - videoTopOffset : SCREEN_HEIGHT,
-                      top: isPortrait ? videoTopOffset : 0,
+                      height: SCREEN_HEIGHT - tabBarHeight,
+                      top: tabBarHeight,
                       left: 0,
-                      opacity: videoAspectRatio ? 1 : 0, // アスペクト比確定まで隠す（Layout Shift防止）
+                      opacity: isLandscape !== null && isVideoLoaded ? 1 : 0,
                     }}
-                    resizeMode={videoResizeMode}
-                    shouldPlay={isPlaying && shouldPlayVideo && !videoError}
+                    resizeMode={isLandscape === true ? ResizeMode.CONTAIN : ResizeMode.COVER}
+                    shouldPlay={isLandscape !== null && isPlaying && shouldPlayVideo && !videoError}
                     isLooping={false}
                     onPlaybackStatusUpdate={handlePlaybackStatus}
-                    onReadyForDisplay={(event) => {
-                      const { width, height } = event.naturalSize;
-                      if (width && height) {
-                        setVideoAspectRatio(width / height);
+                    onReadyForDisplay={(e: any) => {
+                      const ns = e?.naturalSize;
+                      if (ns && isLandscape === null) {
+                        const { width, height, orientation } = ns;
+                        const landscape =
+                          orientation === 'landscape' ||
+                          (width > 0 && height > 0 && width / height > 1.05);
+                        setIsLandscape(landscape);
+                        return; // 再マウント後にisVideoLoadedをtrueにする
                       }
+                      setIsVideoLoaded(true);
                     }}
                     onError={handleVideoError}
                   />
@@ -765,7 +766,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
             </View>
             {/* エラー表示 */}
             {videoError && (
-              <View style={[styles.loadingContainer, { marginTop: videoTopOffset }]}>
+              <View style={styles.loadingContainer}>
                 <Text style={styles.errorText}>動画を読み込めませんでした</Text>
               </View>
             )}
