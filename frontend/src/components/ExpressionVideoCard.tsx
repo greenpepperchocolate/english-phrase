@@ -23,6 +23,7 @@ interface Props {
   isActive: boolean;
   showJapanese: boolean;
   tabBarHeight?: number;
+  onVideoLoaded?: () => void;
 }
 
 export interface ExpressionVideoCardRef {
@@ -37,7 +38,7 @@ function isPlaybackSuccess(
 }
 
 export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
-  ({ expression, isActive, showJapanese, tabBarHeight = 0 }, ref) => {
+  ({ expression, isActive, showJapanese, tabBarHeight = 0, onVideoLoaded }, ref) => {
     const insets = useSafeAreaInsets();
     const videoRef = useRef<Video | null>(null);
     const [isVideoLoaded, setIsVideoLoaded] = useState(false);
@@ -134,6 +135,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       if (isActive) {
         setIsPlaying(true);
         setIsVideoLoaded(false);
+        overlayOpacity.setValue(1);
       } else {
         videoRef.current?.pauseAsync();
         if (replayTimerRef.current) {
@@ -141,7 +143,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
           replayTimerRef.current = null;
         }
       }
-    }, [isActive]);
+    }, [isActive, overlayOpacity]);
 
     useEffect(() => {
       if (isActive && isPlaying) {
@@ -212,6 +214,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
                       setIsLandscape(landscape);
                     }
                     setIsVideoLoaded(true);
+                    onVideoLoaded?.();
                   }}
                   onError={handleVideoError}
                 />

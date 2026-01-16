@@ -8,6 +8,7 @@
   useState,
 } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -105,6 +106,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
     const [horizontalIndex, setHorizontalIndex] = useState(0);
     const horizontalIndexRef = useRef(0);
+    const [isHorizontalLoading, setIsHorizontalLoading] = useState(false);
 
     const [shouldPlayVideo, setShouldPlayVideo] = useState(true);
     const [tabBarHeight, setTabBarHeight] = useState(0);
@@ -266,6 +268,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       if (isActive) {
         setIsPlaying(true);
         setIsVideoLoaded(false);
+        overlayOpacity.setValue(1);
       } else {
         videoRef.current?.pauseAsync();
         expressionVideoRefs.current.forEach((r) => r.pause());
@@ -278,7 +281,22 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           replayTimerRef.current = null;
         }
       }
-    }, [isActive]);
+    }, [isActive, overlayOpacity]);
+
+    // 横スワイプ時にローディングをリセット
+    useEffect(() => {
+      if (horizontalIndex > 0) {
+        setIsHorizontalLoading(true);
+      } else {
+        setIsVideoLoaded(false);
+        overlayOpacity.setValue(1);
+      }
+    }, [horizontalIndex, overlayOpacity]);
+
+    // ExpressionVideoCardのロード完了コールバック
+    const handleExpressionVideoLoaded = useCallback(() => {
+      setIsHorizontalLoading(false);
+    }, []);
 
     useEffect(() => {
       if (!isActive) return;
@@ -807,6 +825,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           isActive={isActive && horizontalIndex === index}
           showJapanese={showJapanese}
           tabBarHeight={tabBarHeight}
+          onVideoLoaded={handleExpressionVideoLoaded}
         />
       );
     };
@@ -859,6 +878,13 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
             </View>
           ))}
         </ScrollView>
+
+        {/* 横スワイプ時のローディングスピナー */}
+        {isHorizontalLoading && (
+          <View style={styles.horizontalLoadingOverlay} pointerEvents="none">
+            <ActivityIndicator size="large" color="#ffffff" />
+          </View>
+        )}
       </View>
     );
   }
@@ -1131,6 +1157,12 @@ const styles = StyleSheet.create({
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000000',
+  },
+  horizontalLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorText: {
     color: 'rgba(255, 255, 255, 0.7)',
