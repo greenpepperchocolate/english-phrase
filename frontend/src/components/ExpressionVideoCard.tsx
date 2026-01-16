@@ -77,8 +77,8 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
           if (registerLoading(videoId)) {
             setIsLoadRegistered(true);
           } else {
-            // 登録失敗時は300ms後に再試行
-            loadRetryTimerRef.current = setTimeout(tryRegister, 300);
+            // 登録失敗時は100ms後に再試行
+            loadRetryTimerRef.current = setTimeout(tryRegister, 100);
           }
         };
         tryRegister();

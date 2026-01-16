@@ -181,6 +181,7 @@ export function FeedList({ topic, isFocused = true }: Props) {
               onAutoSwipe={handleAutoSwipe}
               isGuest={tokens?.anonymous}
               onVerticalScrollEnabledChange={setVerticalScrollEnabled}
+              shouldPreload={index === activeIndex + 1 && isFocused}
             />
           </View>
         ))}

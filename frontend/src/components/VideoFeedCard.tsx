@@ -54,6 +54,7 @@ interface Props {
   onAutoSwipe?: () => void;
   isGuest?: boolean;
   onVerticalScrollEnabledChange?: (enabled: boolean) => void;
+  shouldPreload?: boolean; // 次の動画のプリロード用
 }
 
 export interface VideoFeedCardRef {
@@ -80,6 +81,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       onAutoSwipe,
       isGuest = false,
       onVerticalScrollEnabledChange,
+      shouldPreload = false,
     },
     ref
   ) => {
@@ -189,14 +191,16 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       []
     );
 
-    // デコーダ枯渇防止: ロード登録制御
+    // デコーダ枯渇防止: ロード登録制御（アクティブまたはプリロード時）
+    const shouldRegisterLoading = (isActive && horizontalIndex === 0) || shouldPreload;
+
     useEffect(() => {
-      if (isActive && horizontalIndex === 0) {
+      if (shouldRegisterLoading) {
         const tryRegister = () => {
           if (registerLoading(videoId)) {
             setIsLoadRegistered(true);
           } else {
-            loadRetryTimerRef.current = setTimeout(tryRegister, 300);
+            loadRetryTimerRef.current = setTimeout(tryRegister, 100);
           }
         };
         tryRegister();
@@ -218,8 +222,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
         }
       };
     }, [
-      isActive,
-      horizontalIndex,
+      shouldRegisterLoading,
       videoId,
       registerLoading,
       unregisterLoading,
@@ -267,8 +270,8 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     useEffect(() => {
       if (isActive) {
         setIsPlaying(true);
-        setIsVideoLoaded(false);
-        overlayOpacity.setValue(1);
+        // プリロードでロード済みの場合はリセットしない（フラッシュ防止）
+        // phrase.id変更時に別のuseEffectでリセットされる
       } else {
         videoRef.current?.pauseAsync();
         expressionVideoRefs.current.forEach((r) => r.pause());
@@ -281,7 +284,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           replayTimerRef.current = null;
         }
       }
-    }, [isActive, overlayOpacity]);
+    }, [isActive]);
 
     // 横スワイプ時にローディングをリセット
     useEffect(() => {
@@ -497,7 +500,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           <View style={styles.container}>
             {phrase.video_url ? (
               <>
-                {isActive && horizontalIndex === 0 ? (
+                {(isActive && horizontalIndex === 0) || (shouldPreload && isLoadRegistered) ? (
                   <>
                     <Video
                       key={phrase.id}
@@ -511,7 +514,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                         left: 0,
                       }}
                       resizeMode={isLandscape === false ? ResizeMode.COVER : ResizeMode.CONTAIN}
-                      shouldPlay={isLoadRegistered && isPlaying && shouldPlayVideo && !videoError}
+                      shouldPlay={isActive && isLoadRegistered && isPlaying && shouldPlayVideo && !videoError}
                       isLooping={false}
                       onPlaybackStatusUpdate={handlePlaybackStatus}
                       onReadyForDisplay={(e: any) => {

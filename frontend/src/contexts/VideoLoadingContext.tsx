@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useRef } from 'react';
 
-const MAX_CONCURRENT_VIDEOS = 2;
+// 古いAndroid端末を考慮して3に設定（プリロード1枠 + アクティブ2枠）
+const MAX_CONCURRENT_VIDEOS = 3;
 
 interface VideoLoadingContextValue {
   registerLoading: (videoId: string) => boolean;
