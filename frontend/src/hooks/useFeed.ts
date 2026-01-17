@@ -63,9 +63,9 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
     // React QueryのmaxPagesはpageParamsを正しく更新しないため、
     // FlatListのremoveClippedSubviews + windowSizeでメモリを管理する
 
-    // React Query設定: 10000回スワイプでもエラーが出ないように最適化
-    staleTime: 5 * 60 * 1000, // 5分間はキャッシュを新鮮とみなす
-    gcTime: 10 * 60 * 1000, // 10分間キャッシュを保持（メモリ節約のため短縮）
+    // React Query設定: メモリ節約のためキャッシュ時間を短縮
+    staleTime: 3 * 60 * 1000, // 3分間はキャッシュを新鮮とみなす
+    gcTime: 3 * 60 * 1000, // 3分間キャッシュを保持（長時間使用時のクラッシュ防止）
     refetchOnWindowFocus: false, // ウィンドウフォーカス時の自動refetchを無効化
     refetchOnReconnect: true, // 再接続時は自動refetch（ネットワーク復帰時）
     refetchOnMount: false, // マウント時の自動refetchを無効化

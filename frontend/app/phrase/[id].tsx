@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+﻿import { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Video, ResizeMode } from 'expo-av';
@@ -11,6 +11,15 @@ export default function PhraseDetailScreen() {
   const phraseQuery = usePhraseDetail(Number.isNaN(id) ? undefined : id);
   const { settingsQuery } = useUserSettings();
   const showJapanese = settingsQuery.data?.show_japanese ?? true;
+  const videoRef = useRef<Video>(null);
+
+  // 画面離脱時に動画リソースを解放（メモリリーク防止）
+  useEffect(() => {
+    return () => {
+      videoRef.current?.stopAsync();
+      videoRef.current?.unloadAsync();
+    };
+  }, []);
 
   if (phraseQuery.isLoading || !phraseQuery.data) {
     return (
@@ -25,7 +34,15 @@ export default function PhraseDetailScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {phrase.video_url ? (
-        <Video source={{ uri: phrase.video_url }} style={styles.video} useNativeControls resizeMode={ResizeMode.COVER} />
+        <Video
+          ref={videoRef}
+          source={{ uri: phrase.video_url }}
+          style={styles.video}
+          useNativeControls
+          resizeMode={ResizeMode.COVER}
+          shouldPlay={false}
+          onError={(error) => console.log('[PhraseDetail] Video error:', error)}
+        />
       ) : null}
       <Text style={styles.topic}>{phrase.topic}</Text>
       <Text style={styles.title}>{phrase.text}</Text>

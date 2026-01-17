@@ -64,9 +64,9 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
 
     // メモリ管理: maxPagesは使用しない（FlatListのremoveClippedSubviewsで管理）
 
-    // React Query設定
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    // React Query設定: メモリ節約のためキャッシュ時間を短縮
+    staleTime: 3 * 60 * 1000,
+    gcTime: 3 * 60 * 1000, // 長時間使用時のクラッシュ防止
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
     refetchOnMount: false,
