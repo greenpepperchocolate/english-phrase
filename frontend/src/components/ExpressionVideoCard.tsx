@@ -100,12 +100,21 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       };
     }, [isActive, videoId, registerLoading, unregisterLoading]);
 
-    // コンポーネントのアンマウント時に登録解除
+    // コンポーネントのアンマウント時にリソース解放
     useEffect(() => {
       return () => {
         unregisterLoading(videoId);
+        // 動画リソースを明示的に解放
+        videoRef.current?.unloadAsync();
       };
     }, [videoId, unregisterLoading]);
+
+    // アクティブでなくなったら動画をアンロード（メモリ節約）
+    useEffect(() => {
+      if (!isActive) {
+        videoRef.current?.unloadAsync();
+      }
+    }, [isActive]);
 
     useEffect(() => {
       if (replayTimerRef.current) {

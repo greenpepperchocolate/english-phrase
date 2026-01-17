@@ -229,11 +229,21 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       isLoadRegistered,
     ]);
 
+    // コンポーネントのアンマウント時にリソース解放
     useEffect(() => {
       return () => {
         unregisterLoading(videoId);
+        // 動画リソースを明示的に解放
+        videoRef.current?.unloadAsync();
       };
     }, [videoId, unregisterLoading]);
+
+    // アクティブでなくなったら動画をアンロード（メモリ節約）
+    useEffect(() => {
+      if (!isActive && !shouldPreload) {
+        videoRef.current?.unloadAsync();
+      }
+    }, [isActive, shouldPreload]);
 
     useEffect(() => {
       if (autoSwipeTimerRef.current) {
