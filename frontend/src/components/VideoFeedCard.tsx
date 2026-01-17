@@ -373,14 +373,14 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     const handleVideoError = useCallback(
       (error: string) => {
         console.warn(
-          `[VideoFeedCard] Video error: phrase=${phrase.id}, url=${phrase.video_url?.substring(
+          `[VideoFeedCard] Video error: phrase=${phrase.id}, text="${phrase.text}", url=${phrase.video_url?.substring(
             0,
             50
           )}..., error=${error}`
         );
         setVideoError(error);
       },
-      [phrase.id, phrase.video_url]
+      [phrase.id, phrase.text, phrase.video_url]
     );
 
     const handleFavoritePress = () => {
@@ -812,6 +812,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
             {videoError && (
               <View style={styles.loadingContainer}>
                 <Text style={styles.errorText}>動画を読み込めませんでした</Text>
+                <Text style={styles.errorText}>{phrase.text}</Text>
               </View>
             )}
           </View>

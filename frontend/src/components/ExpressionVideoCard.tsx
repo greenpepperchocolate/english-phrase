@@ -179,7 +179,9 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     };
 
     const handleVideoError = (error: string) => {
-      console.warn('[ExpressionVideoCard] Video error:', error);
+      console.warn(
+        `[ExpressionVideoCard] Video error: expression=${expression.id}, text="${expression.text}", url=${expression.video_url?.substring(0, 50)}..., error=${error}`
+      );
       setVideoError(error);
     };
 
@@ -231,6 +233,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
             {videoError && (
               <View style={styles.loadingContainer}>
                 <Text style={styles.errorText}>動画を読み込めませんでした</Text>
+                <Text style={styles.errorText}>{expression.text}</Text>
               </View>
             )}
             <Pressable style={styles.playPauseArea} onPress={handleVideoPress}>
