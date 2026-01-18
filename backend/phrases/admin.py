@@ -186,7 +186,7 @@ class PhraseAdminForm(forms.ModelForm):
 @admin.register(models.Phrase)
 class PhraseAdmin(admin.ModelAdmin):
     form = PhraseAdminForm
-    list_display = ("id", "topic", "difficulty", "duration_sec", "has_video")
+    list_display = ("id", "text", "topic", "difficulty", "duration_sec", "has_video")
     search_fields = ("text", "meaning")
     list_filter = ("topic", "difficulty")
     inlines = [PhraseExpressionInline]
