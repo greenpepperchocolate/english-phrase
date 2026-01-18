@@ -1,7 +1,12 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { Platform } from 'react-native';
 import { useAuth } from '../providers/AuthProvider';
 import { PhraseSummary } from '../api/types';
 import { useFeedSeed } from './useFeedSeed';
+
+// Android: メモリ制限が厳しいため短いキャッシュ時間
+const GC_TIME = Platform.OS === 'android' ? 90 * 1000 : 3 * 60 * 1000;
+const STALE_TIME = Platform.OS === 'android' ? 60 * 1000 : 3 * 60 * 1000;
 
 type SearchResponse = {
   results: PhraseSummary[];
@@ -64,9 +69,9 @@ export function useSearch({ query, pageSize = 20 }: UseSearchOptions) {
 
     // メモリ管理: maxPagesは使用しない（FlatListのremoveClippedSubviewsで管理）
 
-    // React Query設定: メモリ節約のためキャッシュ時間を短縮
-    staleTime: 3 * 60 * 1000,
-    gcTime: 3 * 60 * 1000, // 長時間使用時のクラッシュ防止
+    // React Query設定: プラットフォーム別にキャッシュ時間を調整
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
     refetchOnMount: false,

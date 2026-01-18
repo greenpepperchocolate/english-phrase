@@ -1,7 +1,13 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { Platform } from 'react-native';
 import { useAuth } from '../providers/AuthProvider';
 import { CursorPaginatedResponse, PhraseSummary } from '../api/types';
 import { useFeedSeed } from './useFeedSeed';
+
+// Android: メモリ制限が厳しいため短いキャッシュ時間
+// iOS: 余裕があるため長めのキャッシュ時間
+const GC_TIME = Platform.OS === 'android' ? 90 * 1000 : 3 * 60 * 1000; // Android: 1.5分, iOS: 3分
+const STALE_TIME = Platform.OS === 'android' ? 60 * 1000 : 3 * 60 * 1000; // Android: 1分, iOS: 3分
 
 function extractPageNumber(next: string | null): number | undefined {
   if (!next) {
@@ -63,9 +69,9 @@ export function useFeed(params: { topic?: string; difficulty?: string; pageSize?
     // React QueryのmaxPagesはpageParamsを正しく更新しないため、
     // FlatListのremoveClippedSubviews + windowSizeでメモリを管理する
 
-    // React Query設定: メモリ節約のためキャッシュ時間を短縮
-    staleTime: 3 * 60 * 1000, // 3分間はキャッシュを新鮮とみなす
-    gcTime: 3 * 60 * 1000, // 3分間キャッシュを保持（長時間使用時のクラッシュ防止）
+    // React Query設定: プラットフォーム別にキャッシュ時間を調整
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
     refetchOnWindowFocus: false, // ウィンドウフォーカス時の自動refetchを無効化
     refetchOnReconnect: true, // 再接続時は自動refetch（ネットワーク復帰時）
     refetchOnMount: false, // マウント時の自動refetchを無効化

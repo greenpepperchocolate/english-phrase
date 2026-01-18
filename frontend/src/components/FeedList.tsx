@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../providers/AuthProvider';
@@ -44,6 +44,14 @@ export function FeedList({ topic, isFocused = true }: Props) {
   }, [activeIndex]);
 
   const items = useMemo(() => feed.data?.pages.flatMap((page) => page.results) ?? [], [feed.data]);
+
+  // メモリ節約: アクティブなインデックス周辺のみをレンダリング
+  // Android: メモリ制限が厳しいため狭いウィンドウ（±2）
+  // iOS: 余裕があるため広めのウィンドウ（±3）
+  const RENDER_WINDOW = Platform.OS === 'android' ? 2 : 3;
+  const shouldRenderItem = useCallback((index: number) => {
+    return Math.abs(index - activeIndex) <= RENDER_WINDOW;
+  }, [activeIndex]);
 
   // itemsの長さを同期（安定したコールバック用）
   useEffect(() => {
@@ -163,26 +171,31 @@ export function FeedList({ topic, isFocused = true }: Props) {
       >
         {items.map((item, index) => (
           <View key={String(item.id)} style={styles.page} collapsable={false}>
-            <VideoFeedCard
-              ref={(ref) => {
-                if (ref) {
-                  videoRefs.current.set(index, ref);
-                } else {
-                  videoRefs.current.delete(index);
-                }
-              }}
-              phrase={item}
-              isActive={index === activeIndex && isFocused}
-              isFavorite={item.is_favorite}
-              isMastered={item.is_mastered}
-              onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
-              onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
-              onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
-              onAutoSwipe={handleAutoSwipe}
-              isGuest={tokens?.anonymous}
-              onVerticalScrollEnabledChange={setVerticalScrollEnabled}
-              shouldPreload={index === activeIndex + 1 && isFocused}
-            />
+            {shouldRenderItem(index) ? (
+              <VideoFeedCard
+                ref={(ref) => {
+                  if (ref) {
+                    videoRefs.current.set(index, ref);
+                  } else {
+                    videoRefs.current.delete(index);
+                  }
+                }}
+                phrase={item}
+                isActive={index === activeIndex && isFocused}
+                isFavorite={item.is_favorite}
+                isMastered={item.is_mastered}
+                onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
+                onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
+                onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
+                onAutoSwipe={handleAutoSwipe}
+                isGuest={tokens?.anonymous}
+                onVerticalScrollEnabledChange={setVerticalScrollEnabled}
+                shouldPreload={index === activeIndex + 1 && isFocused}
+              />
+            ) : (
+              // ウィンドウ外はプレースホルダー（メモリ節約）
+              <View style={styles.placeholder} />
+            )}
           </View>
         ))}
       </PagerView>
@@ -240,5 +253,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+  },
+  placeholder: {
+    flex: 1,
+    backgroundColor: '#000000',
   },
 });

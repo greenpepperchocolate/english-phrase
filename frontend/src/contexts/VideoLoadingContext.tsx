@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useRef } from 'react';
+import { Platform } from 'react-native';
 
-// 古いAndroid端末を考慮して3に設定（プリロード1枠 + アクティブ2枠）
-const MAX_CONCURRENT_VIDEOS = 3;
+// Android: メモリ制限が厳しいため2に設定（アクティブ1枠 + プリロード1枠）
+// iOS: メモリに余裕があるため3に設定
+const MAX_CONCURRENT_VIDEOS = Platform.OS === 'android' ? 2 : 3;
 
 interface VideoLoadingContextValue {
   registerLoading: (videoId: string) => boolean;
