@@ -322,12 +322,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#F08CA6',
   },
   secondaryButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#1d4ed8',
+    borderColor: '#F08CA6',
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1d4ed8',
+    color: '#F08CA6',
   },
   divider: {
     flexDirection: 'row',
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   switchLink: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1d4ed8',
+    color: '#F08CA6',
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#1d4ed8',
+    color: '#F08CA6',
   },
   forgotIcon: {
     fontSize: 64,

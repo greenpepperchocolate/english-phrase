@@ -482,8 +482,8 @@ const styles = StyleSheet.create({
   },
   paginationDotActive: {
     width: 28,
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#F08CA6',
+    borderColor: '#F08CA6',
   },
   paginationText: {
     color: '#ffffff',
@@ -578,7 +578,7 @@ const tutorialStyles = StyleSheet.create({
     left: 24,
     right: 24,
     height: 3,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#F08CA6',
     borderRadius: 2,
   },
   swipeArea: {
@@ -624,7 +624,7 @@ const tutorialStyles = StyleSheet.create({
   },
   arrowText: {
     fontSize: 40,
-    color: '#3b82f6',
+    color: '#F08CA6',
     fontWeight: '300',
   },
   instructionText: {

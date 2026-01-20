@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../providers/AuthProvider';
 import { useFeed } from '../hooks/useFeed';
 import { useToggleFavorite } from '../hooks/useToggleFavorite';
@@ -16,6 +17,7 @@ interface Props {
 
 export function FeedList({ topic, isFocused = true }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { tokens } = useAuth();
   const feed = useFeed({ topic, pageSize: 10 });
   const toggleFavorite = useToggleFavorite();
@@ -58,52 +60,10 @@ export function FeedList({ topic, isFocused = true }: Props) {
     itemsLengthRef.current = items.length;
   }, [items.length]);
 
-  const fetchNextPageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // フェッチ状態を同期的に管理
   useEffect(() => {
     isFetchingRef.current = feed.isFetchingNextPage;
   }, [feed.isFetchingNextPage]);
-
-  // クリーンアップ: アンマウント時にタイマーをクリア
-  useEffect(() => {
-    return () => {
-      if (fetchNextPageTimeoutRef.current) {
-        clearTimeout(fetchNextPageTimeoutRef.current);
-        fetchNextPageTimeoutRef.current = null;
-      }
-    };
-  }, []);
-
-  // デバウンス処理: feedRefを使用して安定化（10000回スワイプ対応）
-  const debouncedFetchNextPage = useCallback(() => {
-    // 既存のタイマーをクリア
-    if (fetchNextPageTimeoutRef.current) {
-      clearTimeout(fetchNextPageTimeoutRef.current);
-      fetchNextPageTimeoutRef.current = null;
-    }
-
-    // 既にフェッチ中なら何もしない（重要！）
-    if (isFetchingRef.current) {
-      return;
-    }
-
-    // 300ms後にフェッチ（500ms→300msに短縮してレスポンス向上）
-    fetchNextPageTimeoutRef.current = setTimeout(() => {
-      const currentFeed = feedRef.current;
-      // タイムアウト時点でも二重チェック
-      if (currentFeed.hasNextPage && !isFetchingRef.current) {
-        isFetchingRef.current = true; // 先にフラグを立てる
-        currentFeed.fetchNextPage().catch((error) => {
-          // エラーをキャッチして無視（AbortErrorなど）
-          console.log('Fetch next page error (ignored):', error?.message);
-        }).finally(() => {
-          isFetchingRef.current = false; // フラグをクリア
-        });
-      }
-      fetchNextPageTimeoutRef.current = null;
-    }, 300);
-  }, []); // 依存配列を空にして安定化
 
   // PagerViewのページ変更ハンドラ
   const onPageSelected = useCallback(
@@ -114,11 +74,11 @@ export function FeedList({ topic, isFocused = true }: Props) {
 
         // 最後に近づいたら次のページをプリフェッチ（残り3件）
         if (index >= itemsLengthRef.current - 3 && feedRef.current.hasNextPage && !isFetchingRef.current) {
-          debouncedFetchNextPage();
+          feedRef.current.fetchNextPage();
         }
       }
     },
-    [debouncedFetchNextPage]
+    []
   );
 
   const handleAutoSwipe = useCallback(() => {
@@ -126,12 +86,21 @@ export function FeedList({ topic, isFocused = true }: Props) {
     const nextIndex = activeIndexRef.current + 1;
     if (nextIndex < itemsLengthRef.current) {
       pagerRef.current?.setPage(nextIndex);
+    } else {
+      // 最後の動画に達した場合
+      if (!feedRef.current.hasNextPage) {
+        // 次のページがない場合はクエリをリセットして再フェッチ
+        pagerRef.current?.setPage(0);
+        setActiveIndex(0);
+        // クエリをリセットして最初から再取得
+        queryClient.resetQueries({ queryKey: ['feed'] });
+      }
     }
-    // 最後に近づいたら次のページをプリフェッチ（残り3件に短縮）
+    // 最後に近づいたら次のページをプリフェッチ（残り3件）
     if (nextIndex >= itemsLengthRef.current - 3 && feedRef.current.hasNextPage && !isFetchingRef.current) {
-      debouncedFetchNextPage();
+      feedRef.current.fetchNextPage();
     }
-  }, [debouncedFetchNextPage]); // 依存配列を最小化して安定化
+  }, [queryClient]);
 
   // 初回ロード中のみローディング表示
   if (feed.isLoading && !feed.data) {

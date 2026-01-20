@@ -1047,8 +1047,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   masteredButtonActive: {
-    backgroundColor: 'rgba(59, 130, 246, 0.9)',
-    borderColor: '#3b82f6',
+    backgroundColor: 'rgba(240, 140, 166, 0.9)',
+    borderColor: '#F08CA6',
   },
   masteredButtonText: {
     fontSize: 14,
@@ -1067,7 +1067,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 22,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#F08CA6',
     zIndex: -1,
   },
   sparkle: {
@@ -1160,7 +1160,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     height: 2,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#F08CA6',
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,

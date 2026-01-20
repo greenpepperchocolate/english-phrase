@@ -10,6 +10,7 @@ import {
 import PagerView from 'react-native-pager-view';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../src/providers/AuthProvider';
 import { useSearch } from '../src/hooks/useSearch';
 import { useToggleFavorite } from '../src/hooks/useToggleFavorite';
@@ -19,6 +20,7 @@ import { ErrorFallback } from '../src/components/ErrorFallback';
 
 export default function SearchScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { tokens } = useAuth();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,11 +80,20 @@ export default function SearchScreen() {
     const nextIndex = activeIndexRef.current + 1;
     if (nextIndex < itemsLengthRef.current) {
       pagerRef.current?.setPage(nextIndex);
+    } else {
+      // 最後の動画に達した場合
+      if (!search.hasNextPage) {
+        // 次のページがない場合はクエリをリセットして再フェッチ
+        pagerRef.current?.setPage(0);
+        setActiveIndex(0);
+        // クエリをリセットして最初から再取得
+        queryClient.resetQueries({ queryKey: ['search'] });
+      }
     }
     if (nextIndex >= itemsLengthRef.current - 5 && search.hasNextPage && !search.isFetchingNextPage) {
       search.fetchNextPage();
     }
-  }, [search]);
+  }, [search, queryClient]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -273,7 +284,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#F08CA6',
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#F08CA6',
     marginBottom: 16,
   },
   buttonDisabled: {
@@ -151,6 +151,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 14,
-    color: '#1d4ed8',
+    color: '#F08CA6',
   },
 });

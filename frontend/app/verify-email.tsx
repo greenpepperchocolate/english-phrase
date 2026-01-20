@@ -55,7 +55,7 @@ export default function VerifyEmailScreen() {
       <View style={styles.content}>
         {status === 'verifying' && (
           <>
-            <ActivityIndicator size="large" color="#1d4ed8" />
+            <ActivityIndicator size="large" color="#F08CA6" />
             <Text style={styles.title}>メールアドレスを認証中...</Text>
             <Text style={styles.message}>メールアドレスの認証を行っています。しばらくお待ちください。</Text>
           </>
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   button: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#F08CA6',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,

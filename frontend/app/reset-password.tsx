@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#F08CA6',
   },
   buttonDisabled: {
     opacity: 0.6,

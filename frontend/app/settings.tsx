@@ -343,7 +343,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#000000',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -356,19 +356,19 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#1a1a1a',
     padding: 16,
     borderRadius: 12,
     rowGap: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 2,
     marginBottom: 16,
   },
   label: {
     fontWeight: '600',
-    color: '#1b263b',
+    color: '#ffffff',
   },
   input: {
     borderWidth: 1,
@@ -391,26 +391,26 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#ced4da',
-    backgroundColor: '#ffffff',
+    borderColor: '#333333',
+    backgroundColor: '#1a1a1a',
     justifyContent: 'center',
     alignItems: 'center',
   },
   repeatButtonActive: {
-    borderColor: '#1d4ed8',
-    backgroundColor: '#1d4ed8',
+    borderColor: '#F08CA6',
+    backgroundColor: '#F08CA6',
   },
   repeatButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1b263b',
+    color: '#ffffff',
   },
   repeatButtonTextActive: {
     color: '#ffffff',
   },
   hint: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#888888',
     fontStyle: 'italic',
   },
   footer: {
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   },
   info: {
     textAlign: 'center',
-    color: '#475569',
+    color: '#888888',
     marginBottom: 8,
   },
   errorText: {
@@ -428,13 +428,13 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   guestNotice: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: '#1a1a1a',
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fbbf24',
+    borderColor: '#F08CA6',
   },
   guestNoticeIcon: {
     fontSize: 48,
@@ -443,18 +443,18 @@ const styles = StyleSheet.create({
   guestNoticeTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#92400e',
+    color: '#F08CA6',
     marginBottom: 8,
   },
   guestNoticeText: {
     fontSize: 14,
-    color: '#78350f',
+    color: '#cccccc',
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 20,
   },
   signUpPromptButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#F08CA6',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -468,27 +468,27 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   labelDisabled: {
-    color: '#94a3b8',
+    color: '#666666',
   },
   repeatButtonDisabled: {
-    backgroundColor: '#f1f5f9',
-    borderColor: '#e2e8f0',
+    backgroundColor: '#0d0d0d',
+    borderColor: '#333333',
   },
   repeatButtonTextDisabled: {
-    color: '#cbd5e1',
+    color: '#666666',
   },
   hintDisabled: {
-    color: '#cbd5e1',
+    color: '#666666',
   },
   saveButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#F08CA6',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#93c5fd',
+    backgroundColor: '#F08CA6',
     opacity: 0.6,
   },
   saveButtonText: {
@@ -530,16 +530,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#333333',
   },
   linkButtonText: {
     fontSize: 16,
-    color: '#1d4ed8',
+    color: '#F08CA6',
     fontWeight: '500',
   },
   linkButtonArrow: {
     fontSize: 24,
-    color: '#94a3b8',
+    color: '#666666',
     fontWeight: '300',
   },
   contactFormContainer: {
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   contactLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1b263b',
+    color: '#ffffff',
     marginTop: 4,
   },
   pickerContainer: {
@@ -561,60 +561,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#ced4da',
-    backgroundColor: '#ffffff',
+    borderColor: '#333333',
+    backgroundColor: '#1a1a1a',
     minWidth: 100,
     alignItems: 'center',
   },
   pickerButtonActive: {
-    borderColor: '#1d4ed8',
-    backgroundColor: '#1d4ed8',
+    borderColor: '#F08CA6',
+    backgroundColor: '#F08CA6',
   },
   pickerButtonDisabled: {
-    backgroundColor: '#f1f5f9',
-    borderColor: '#e2e8f0',
+    backgroundColor: '#0d0d0d',
+    borderColor: '#333333',
     opacity: 0.6,
   },
   pickerButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1b263b',
+    color: '#ffffff',
   },
   pickerButtonTextActive: {
     color: '#ffffff',
   },
   pickerButtonTextDisabled: {
-    color: '#cbd5e1',
+    color: '#666666',
   },
   textArea: {
     borderWidth: 1,
-    borderColor: '#ced4da',
+    borderColor: '#333333',
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
-    color: '#1b263b',
+    color: '#ffffff',
     minHeight: 100,
     maxHeight: 150,
+    backgroundColor: '#0d0d0d',
   },
   textAreaDisabled: {
-    backgroundColor: '#f1f5f9',
-    color: '#94a3b8',
+    backgroundColor: '#0d0d0d',
+    color: '#666666',
   },
   characterCount: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#888888',
     textAlign: 'right',
     marginTop: -8,
   },
   submitButton: {
-    backgroundColor: '#1d4ed8',
+    backgroundColor: '#F08CA6',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: '#93c5fd',
+    backgroundColor: '#F08CA6',
     opacity: 0.6,
   },
   submitButtonText: {
