@@ -6,13 +6,13 @@ export default function TermsOfServiceScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           <Text style={styles.title}>利用規約</Text>
-          <Text style={styles.updated}>最終更新日: 2024年12月17日</Text>
+          <Text style={styles.updated}>最終更新日: 2026年01月20日</Text>
 
           {/* 1. 総則 */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>1. 総則</Text>
             <Text style={styles.paragraph}>
-              本利用規約（以下「本規約」）は、AI Works（以下「当社」）が提供する
+              本利用規約（以下「本規約」）は、川部 貴洋（屋号：AI Works、以下「当方」）が提供する
               モバイルアプリケーション「映単語」（以下「本アプリ」）の利用条件を定めるものです。
               ユーザーは、本規約に同意したうえで本アプリを利用するものとします。
             </Text>
@@ -26,7 +26,7 @@ export default function TermsOfServiceScreen() {
             </Text>
             <Text style={styles.listItem}>• アカウント情報は自己の責任で管理するものとします</Text>
             <Text style={styles.listItem}>• パスワード等を第三者に開示・共有してはなりません</Text>
-            <Text style={styles.listItem}>• 不正利用が判明した場合、速やかに当社へ通知してください</Text>
+            <Text style={styles.listItem}>• 不正利用が判明した場合、速やかに当方へ通知してください</Text>
           </View>
 
           {/* 3. 未成年者 */}
@@ -46,7 +46,7 @@ export default function TermsOfServiceScreen() {
             <Text style={styles.listItem}>• 本アプリの運営を妨害する行為</Text>
             <Text style={styles.listItem}>• 不正アクセス、リバースエンジニアリング等の行為</Text>
             <Text style={styles.listItem}>• コンテンツを無断で複製・転載・配布する行為</Text>
-            <Text style={styles.listItem}>• その他、当社が不適切と判断する行為</Text>
+            <Text style={styles.listItem}>• その他、当方が不適切と判断する行為</Text>
           </View>
 
           {/* 5. コンテンツ */}
@@ -54,7 +54,7 @@ export default function TermsOfServiceScreen() {
             <Text style={styles.sectionTitle}>5. コンテンツの権利</Text>
             <Text style={styles.paragraph}>
               本アプリに掲載される動画、画像、テキスト等のコンテンツに関する著作権その他の権利は、
-              当社または正当な権利者に帰属します。
+              当方または正当な権利者に帰属します。
               ユーザーは、個人的かつ非商業的な学習目的の範囲内でのみ利用できるものとします。
             </Text>
           </View>
@@ -63,8 +63,9 @@ export default function TermsOfServiceScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>6. サービスの変更・停止</Text>
             <Text style={styles.paragraph}>
-              当社は、ユーザーへの事前通知なく、本アプリの内容を変更、追加、または停止することがあります。
-              これにより生じた損害について、当社は責任を負いません。
+              当方は、必要に応じて本アプリの内容を変更、追加、または停止することがあります。
+              当方は、当方の故意または重過失による場合を除き、これによりユーザーに生じた損害について責任を負いません。
+
             </Text>
           </View>
 
@@ -72,7 +73,7 @@ export default function TermsOfServiceScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>7. 利用停止・退会</Text>
             <Text style={styles.paragraph}>
-              当社は、ユーザーが本規約に違反した場合、事前通知なくアカウントの利用停止または削除を行うことができます。
+              当方は、ユーザーが本規約に違反した場合、事前通知なくアカウントの利用停止または削除を行うことができます。
             </Text>
           </View>
 
@@ -80,7 +81,7 @@ export default function TermsOfServiceScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>8. 免責事項</Text>
             <Text style={styles.paragraph}>
-              本アプリは現状有姿で提供されるものであり、当社はその完全性、正確性、有用性等について
+              本アプリは現状有姿で提供されるものであり、当方はその完全性、正確性、有用性等について
               明示または黙示を問わず保証するものではありません。
               ただし、法令により免責が認められない場合を除きます。
             </Text>
@@ -90,7 +91,7 @@ export default function TermsOfServiceScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>9. 規約の変更</Text>
             <Text style={styles.paragraph}>
-              当社は、必要に応じて本規約を変更することがあります。
+              当方は、必要に応じて本規約を変更することがあります。
               変更後の規約は、本アプリ内に表示された時点から効力を生じるものとします。
             </Text>
           </View>
@@ -107,8 +108,7 @@ export default function TermsOfServiceScreen() {
           {/* 11. 事業者情報 */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>11. 事業者情報</Text>
-            <Text style={styles.listItem}>• 事業者名：AI Works</Text>
-            <Text style={styles.listItem}>• 所在地：〒160-0022 東京都新宿区新宿7-16-2 101</Text>
+            <Text style={styles.listItem}>• 事業者名：川部 貴洋（屋号：AI Works）</Text>
             <Text style={styles.listItem}>• メールアドレス：aiworks.corporate@gmail.com</Text>
             <Text style={styles.listItem}>• Webサイト：https://www.ai-works.site/</Text>
           </View>

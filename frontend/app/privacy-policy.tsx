@@ -11,7 +11,7 @@ export default function PrivacyPolicyScreen() {
           {/* 0. 総則 */}
           <View style={styles.section}>
             <Text style={styles.paragraph}>
-              AI Works（以下「当社」）は、当社が提供するモバイルアプリケーション（以下「本アプリ」）における、
+              川部 貴洋（屋号：AI Works、以下「当方」）は、当方が提供するモバイルアプリケーション（以下「本アプリ」）における、
               ユーザーの個人情報および利用情報の取扱いについて、以下のとおりプライバシーポリシーを定めます。
             </Text>
           </View>
@@ -68,7 +68,7 @@ export default function PrivacyPolicyScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>4. 個人情報の第三者提供</Text>
             <Text style={styles.paragraph}>
-              当社は、以下の場合を除き、ユーザーの個人情報を第三者に提供することはありません。
+              当方は、以下の場合を除き、ユーザーの個人情報を第三者に提供することはありません。
             </Text>
             <Text style={styles.listItem}>• ユーザーの同意がある場合</Text>
             <Text style={styles.listItem}>• 法令に基づき開示が求められた場合</Text>
@@ -115,7 +115,7 @@ export default function PrivacyPolicyScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>8. セキュリティ対策</Text>
             <Text style={styles.paragraph}>
-              当社は、個人情報の漏洩、改ざん、紛失等を防止するため、暗号化、アクセス制御等の合理的な安全管理措置を講じます。
+              当方は、個人情報の漏洩、改ざん、紛失等を防止するため、暗号化、アクセス制御等の合理的な安全管理措置を講じます。
             </Text>
           </View>
 
@@ -124,7 +124,7 @@ export default function PrivacyPolicyScreen() {
             <Text style={styles.sectionTitle}>9. プライバシーポリシーの変更</Text>
             <Text style={styles.paragraph}>
               本ポリシーは、法令改正やサービス内容の変更等に応じて改定されることがあります。
-              重要な変更がある場合、アプリ内または当社Webサイト上で通知します。
+              重要な変更がある場合、アプリ内または当方Webサイト等で通知します。
             </Text>
           </View>
 
@@ -132,8 +132,7 @@ export default function PrivacyPolicyScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>10. 事業者情報・お問い合わせ</Text>
 
-            <Text style={styles.listItem}>• 事業者名：AI Works</Text>
-            <Text style={styles.listItem}>• 所在地：〒160-0022 東京都新宿区新宿7-16-2 101</Text>
+            <Text style={styles.listItem}>• 事業者名：川部 貴洋（屋号：AI Works）</Text>
             <Text style={styles.listItem}>• メールアドレス：aiworks.corporate@gmail.com</Text>
             <Text style={styles.listItem}>• Webサイト：https://www.ai-works.site/</Text>
           </View>

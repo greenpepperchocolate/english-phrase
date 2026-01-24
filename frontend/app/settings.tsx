@@ -314,6 +314,7 @@ export default function SettingsScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.info}>{isGuest ? 'ゲストアカウント' : userEmail || 'ログイン中'}</Text>
+            <Text style={styles.versionText}>Version {APP_VERSION}</Text>
             {!isGuest && (
               <Pressable style={styles.logoutButton} onPress={signOut}>
                 <Text style={styles.logoutButtonText}>ログアウト</Text>
@@ -420,6 +421,12 @@ const styles = StyleSheet.create({
   info: {
     textAlign: 'center',
     color: '#888888',
+    marginBottom: 8,
+  },
+  versionText: {
+    textAlign: 'center',
+    color: '#666666',
+    fontSize: 12,
     marginBottom: 8,
   },
   errorText: {

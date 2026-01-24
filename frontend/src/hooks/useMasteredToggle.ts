@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, InfiniteData } from '@tanstack/react-query';
 import { useAuth } from '../providers/AuthProvider';
-import { PhraseSummary } from '../api/types';
+import { PhraseSummary, MasteryRate } from '../api/types';
+import { maybeRequestMasteryReview } from '../utils/reviewPrompt';
 
 type FeedPage = {
   results: PhraseSummary[];
@@ -87,10 +88,18 @@ export function useMasteredToggle() {
         if (data) queryClient.setQueryData(queryKey, data);
       });
     },
-    // 成功時はマスター率のみ更新（フィードは再取得しない）
-    onSuccess: () => {
-      // マスター率は動画再生に影響しないため、invalidateしても問題ない
-      queryClient.invalidateQueries({ queryKey: ['mastery-rate'] });
+    // 成功時にマスター率のみ更新（フィードは再取得しない）
+    onSuccess: async (_data, variables) => {
+      if (variables?.on) {
+        const mastery = await queryClient.fetchQuery<MasteryRate>({
+          queryKey: ['mastery-rate'],
+          queryFn: () => authorizedFetch<MasteryRate>('/mastery-rate'),
+          staleTime: 0,
+        });
+        await maybeRequestMasteryReview(mastery.mastered_count);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['mastery-rate'] });
+      }
     },
   });
 }
