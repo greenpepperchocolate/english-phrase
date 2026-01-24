@@ -18,11 +18,8 @@ export default {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      infoPlist: {
-        NSAppTransportSecurity: {
-          NSAllowsArbitraryLoads: true, // 開発環境でHTTP通信を許可
-        },
-      },
+      bundleIdentifier: 'site.ai-works.eitango',
+      buildNumber: '1',
     },
     android: {
       adaptiveIcon: {
@@ -40,9 +37,6 @@ export default {
         {
           ios: {
             useFrameworks: 'static',
-          },
-          android: {
-            usesCleartextTraffic: true, // 開発環境でHTTP通信を許可
           },
         },
       ],
