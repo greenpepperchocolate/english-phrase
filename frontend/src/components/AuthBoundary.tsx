@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 13,
-    color: '#888888',
+    color: '#F08CA6',
   },
   formContainer: {
     gap: 14,
