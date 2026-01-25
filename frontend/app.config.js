@@ -18,7 +18,7 @@ export default {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'site.ai-works.eitango',
+      bundleIdentifier: 'jp.aiworks.eitango',
       buildNumber: '1',
     },
     android: {

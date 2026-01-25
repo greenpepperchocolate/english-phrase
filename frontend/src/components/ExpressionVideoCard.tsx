@@ -143,19 +143,21 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
     useEffect(() => {
       if (isActive) {
         setIsPlaying(true);
-        setIsVideoLoaded(false);
-        overlayOpacity.setValue(1);
       } else {
         videoRef.current?.pauseAsync();
         if (replayTimerRef.current) {
           clearTimeout(replayTimerRef.current);
           replayTimerRef.current = null;
         }
+        // 非アクティブになった時に状態をリセット
+        // 次にアクティブになった時にオーバーレイが確実に表示されるようにする
+        setIsVideoLoaded(false);
+        overlayOpacity.setValue(1);
       }
     }, [isActive, overlayOpacity]);
 
     useEffect(() => {
-      if (isActive && isPlaying) {
+      if (isActive && isPlaying && isVideoLoaded) {
         const timer = setTimeout(() => {
           videoRef.current?.playAsync();
         }, 100);
@@ -163,12 +165,11 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
       } else if (!isPlaying) {
         videoRef.current?.pauseAsync();
       }
-    }, [isActive, isPlaying]);
+    }, [isActive, isPlaying, isVideoLoaded]);
 
     const handlePlaybackStatus = (status: AVPlaybackStatus) => {
-      if (isPlaybackSuccess(status) && !isVideoLoaded) {
-        setIsVideoLoaded(true);
-      }
+      // isVideoLoadedはonReadyForDisplayでのみ設定する
+      // handlePlaybackStatusでは設定しない（resizeModeが確定する前に表示されるのを防ぐため）
 
       // 動画終了時: 1秒静止してからリプレイ
       if (isPlaybackSuccess(status) && status.didJustFinish) {
@@ -212,7 +213,7 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
                     left: 0,
                   }}
                   resizeMode={isLandscape === false ? ResizeMode.COVER : ResizeMode.CONTAIN}
-                  shouldPlay={isLoadRegistered && isPlaying && !videoError}
+                  shouldPlay={isLoadRegistered && isPlaying && !videoError && isVideoLoaded}
                   isLooping={false}
                   onPlaybackStatusUpdate={handlePlaybackStatus}
                   onReadyForDisplay={(e: any) => {
@@ -223,16 +224,28 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
                         orientation === 'landscape' ||
                         (width > 0 && height > 0 && width / height > 1.05);
                       setIsLandscape(landscape);
+                      // resizeModeが適用されるまで待ってからisVideoLoadedをtrueにする
+                      // これによりリサイズが完了してから動画が表示される
+                      setTimeout(() => {
+                        setIsVideoLoaded(true);
+                        onVideoLoaded?.();
+                      }, 50);
+                    } else {
+                      // isLandscapeが既に設定済みの場合は即座に表示
+                      setIsVideoLoaded(true);
+                      onVideoLoaded?.();
                     }
-                    setIsVideoLoaded(true);
-                    onVideoLoaded?.();
                   }}
                   onError={handleVideoError}
                 />
                 {!videoError && (
                   <Animated.View
                     pointerEvents="none"
-                    style={[styles.loadingOverlay, { opacity: overlayOpacity }]}
+                    style={[
+                      styles.loadingOverlay,
+                      // isVideoLoadedがfalseの時は即座に不透明、trueの時はアニメーション値を使用
+                      { opacity: isVideoLoaded ? overlayOpacity : 1 }
+                    ]}
                   />
                 )}
               </>

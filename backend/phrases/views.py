@@ -73,14 +73,16 @@ class PhraseFeedView(generics.ListAPIView):
             )
             # Prioritize non-mastered phrases, then pseudo-random based on session seed
             # This ensures consistent ordering across pagination for the same session
+            # Using LCG-style formula for better randomization: (id * 1103515245 + seed * 12345) % 2^31
             qs = qs.annotate(
-                random_order=Mod(F('id') * seed, Value(1000000))
+                random_order=Mod(F('id') * Value(1103515245) + Value(seed) * Value(12345), Value(2147483648))
             )
             return qs.order_by('is_mastered_by_user', 'random_order')
         else:
             # For anonymous users, pseudo-random based on session seed
+            # Using LCG-style formula for better randomization
             qs = qs.annotate(
-                random_order=Mod(F('id') * seed, Value(1000000))
+                random_order=Mod(F('id') * Value(1103515245) + Value(seed) * Value(12345), Value(2147483648))
             )
             return qs.order_by('random_order')
 
@@ -405,13 +407,14 @@ class FavoritesListView(generics.ListAPIView):
         )
 
         # Pseudo-random ordering based on session seed for consistent pagination
+        # Using LCG-style formula for better randomization: (id * 1103515245 + seed * 12345) % 2^31
         return (
             models.Phrase.objects.filter(id__in=favorite_phrase_ids)
             .prefetch_related("phraseexpression_set__expression")
             .annotate(
                 is_mastered_by_user=Exists(mastered_subquery),
                 is_favorite_by_user=Exists(favorite_subquery),
-                random_order=Mod(F('id') * seed, Value(1000000))
+                random_order=Mod(F('id') * Value(1103515245) + Value(seed) * Value(12345), Value(2147483648))
             )
             .order_by('is_mastered_by_user', 'random_order')
         )

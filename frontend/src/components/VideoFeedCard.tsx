@@ -112,6 +112,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
 
     const [shouldPlayVideo, setShouldPlayVideo] = useState(true);
     const [tabBarHeight, setTabBarHeight] = useState(0);
+    const tabBarMeasuredRef = useRef(false);
 
     const autoSwipeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
       null
@@ -146,6 +147,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     );
 
     const hasExpressions = horizontalItems.length > 1;
+
+    // タブバーの推定高さ（レイアウトジャンプ防止）
+    // onLayoutで計測されるまでは推定値を使用
+    const effectiveTabBarHeight = tabBarMeasuredRef.current ? tabBarHeight : (hasExpressions ? insets.top + 52 : 0);
 
     useEffect(() => {
       horizontalIndexRef.current = horizontalIndex;
@@ -297,10 +302,13 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     }, [isActive]);
 
     // 横スワイプ時にローディングをリセット
+    // horizontalIndex > 0 になった時点で状態をリセットしておく
+    // これにより戻ってきた時は既に正しい状態になっている
     useEffect(() => {
       if (horizontalIndex > 0) {
         setIsHorizontalLoading(true);
-      } else {
+        // phrase動画から離れる時に状態をリセット
+        // 戻ってきた時にオーバーレイが確実に表示されるようにする
         setIsVideoLoaded(false);
         overlayOpacity.setValue(1);
       }
@@ -317,7 +325,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       const timer = setTimeout(() => {
         if (isPlaying) {
           if (horizontalIndex === 0) {
-            videoRef.current?.playAsync();
+            // isVideoLoadedがtrueになるまで再生しない
+            if (isVideoLoaded) {
+              videoRef.current?.playAsync();
+            }
             expressionVideoRefs.current.forEach((r) => r.pause());
           } else {
             videoRef.current?.pauseAsync();
@@ -333,12 +344,11 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
       }, 100);
 
       return () => clearTimeout(timer);
-    }, [isActive, isPlaying, horizontalIndex]);
+    }, [isActive, isPlaying, horizontalIndex, isVideoLoaded]);
 
     const handlePlaybackStatus = (status: AVPlaybackStatus) => {
-      if (isPlaybackSuccess(status) && !isVideoLoaded) {
-        setIsVideoLoaded(true);
-      }
+      // isVideoLoadedはonReadyForDisplayでのみ設定する
+      // handlePlaybackStatusでは設定しない（resizeModeが確定する前に表示されるのを防ぐため）
 
       if (!isPlaybackSuccess(status) || !status.didJustFinish) return;
       if (!isVideoLoaded) return;
@@ -519,12 +529,12 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                       style={{
                         position: 'absolute',
                         width: SCREEN_WIDTH,
-                        height: SCREEN_HEIGHT - tabBarHeight,
-                        top: tabBarHeight,
+                        height: SCREEN_HEIGHT - effectiveTabBarHeight,
+                        top: effectiveTabBarHeight,
                         left: 0,
                       }}
                       resizeMode={isLandscape === false ? ResizeMode.COVER : ResizeMode.CONTAIN}
-                      shouldPlay={isActive && isLoadRegistered && isPlaying && shouldPlayVideo && !videoError}
+                      shouldPlay={isActive && isLoadRegistered && isPlaying && shouldPlayVideo && !videoError && isVideoLoaded}
                       isLooping={false}
                       onPlaybackStatusUpdate={handlePlaybackStatus}
                       onReadyForDisplay={(e: any) => {
@@ -535,15 +545,24 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                             orientation === 'landscape' ||
                             (width > 0 && height > 0 && width / height > 1.05);
                           setIsLandscape(landscape);
+                          // resizeModeが適用されるまで待ってからisVideoLoadedをtrueにする
+                          setTimeout(() => {
+                            setIsVideoLoaded(true);
+                          }, 50);
+                        } else {
+                          setIsVideoLoaded(true);
                         }
-                        setIsVideoLoaded(true);
                       }}
                       onError={handleVideoError}
                     />
                     {!videoError && (
                       <Animated.View
                         pointerEvents="none"
-                        style={[styles.loadingOverlay, { opacity: overlayOpacity }]}
+                        style={[
+                          styles.loadingOverlay,
+                          // isVideoLoadedがfalseの時は即座に不透明、trueの時はアニメーション値を使用
+                          { opacity: isVideoLoaded ? overlayOpacity : 1 }
+                        ]}
                       />
                     )}
                   </>
@@ -838,7 +857,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           expression={item.data as unknown as Expression}
           isActive={isActive && horizontalIndex === index}
           showJapanese={showJapanese}
-          tabBarHeight={tabBarHeight}
+          tabBarHeight={effectiveTabBarHeight}
           onVideoLoaded={handleExpressionVideoLoaded}
         />
       );
@@ -859,7 +878,10 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           style={[styles.tabBar, { paddingTop: insets.top }]}
           onLayout={(event) => {
             const { height } = event.nativeEvent.layout;
-            if (height !== tabBarHeight) setTabBarHeight(height);
+            if (height !== tabBarHeight) {
+              setTabBarHeight(height);
+              tabBarMeasuredRef.current = true;
+            }
           }}
           pointerEvents="box-none"
         >
@@ -1126,8 +1148,7 @@ const styles = StyleSheet.create({
   },
   horizontalPage: {
     width: SCREEN_WIDTH,
-    height: '100%',
-    flex: 1,
+    height: SCREEN_HEIGHT,
   },
   tabBar: {
     position: 'absolute',
