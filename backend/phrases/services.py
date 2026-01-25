@@ -147,26 +147,35 @@ def send_verification_email(user, token: str) -> None:
 
 このメールに心当たりがない場合は、無視してください。
 
-映単語チーム
+---
+AI Works
+aiworks.corporate@gmail.com
+https://www.ai-works.site/
 """
 
     html_message = f"""
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #1d4ed8;">映単語へようこそ！</h2>
+        <h2 style="color: #F08CA6;">映単語へようこそ！</h2>
         <p>以下のボタンをクリックしてメールアドレスを確認してください：</p>
         <div style="margin: 30px 0;">
             <a href="{verification_url}"
-               style="background-color: #1d4ed8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+               style="background-color: #F08CA6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 メールアドレスを確認する
             </a>
         </div>
         <p style="color: #666; font-size: 14px;">または、このリンクをブラウザにコピー＆ペーストしてください：</p>
-        <p style="color: #1d4ed8; font-size: 14px; word-break: break-all;">{verification_url}</p>
+        <p style="color: #F08CA6; font-size: 14px; word-break: break-all;">{verification_url}</p>
         <p style="color: #999; font-size: 12px; margin-top: 30px;">
             このリンクは24時間で期限切れになります。<br>
             このメールに心当たりがない場合は、無視してください。
+        </p>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0 20px 0;">
+        <p style="color: #666; font-size: 12px; margin: 0;">
+            <strong>AI Works</strong><br>
+            <a href="mailto:aiworks.corporate@gmail.com" style="color: #F08CA6; text-decoration: none;">aiworks.corporate@gmail.com</a><br>
+            <a href="https://www.ai-works.site/" style="color: #F08CA6; text-decoration: none;">https://www.ai-works.site/</a>
         </p>
     </div>
 </body>
@@ -214,27 +223,36 @@ def send_password_reset_email(user, token: str) -> None:
 
 パスワードリセットをリクエストしていない場合は、このメールを無視してください。
 
-映単語チーム
+---
+AI Works
+aiworks.corporate@gmail.com
+https://www.ai-works.site/
 """
 
     html_message = f"""
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #1d4ed8;">パスワードのリセット</h2>
+        <h2 style="color: #F08CA6;">パスワードのリセット</h2>
         <p>映単語のパスワードリセットをリクエストされました。</p>
         <p>以下のボタンをクリックしてパスワードをリセットしてください：</p>
         <div style="margin: 30px 0;">
             <a href="{reset_url}"
-               style="background-color: #1d4ed8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+               style="background-color: #F08CA6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 パスワードをリセットする
             </a>
         </div>
         <p style="color: #666; font-size: 14px;">または、このリンクをブラウザにコピー＆ペーストしてください：</p>
-        <p style="color: #1d4ed8; font-size: 14px; word-break: break-all;">{reset_url}</p>
+        <p style="color: #F08CA6; font-size: 14px; word-break: break-all;">{reset_url}</p>
         <p style="color: #999; font-size: 12px; margin-top: 30px;">
             このリンクは1時間で期限切れになります。<br>
             パスワードリセットをリクエストしていない場合は、このメールを無視してください。
+        </p>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0 20px 0;">
+        <p style="color: #666; font-size: 12px; margin: 0;">
+            <strong>AI Works</strong><br>
+            <a href="mailto:aiworks.corporate@gmail.com" style="color: #F08CA6; text-decoration: none;">aiworks.corporate@gmail.com</a><br>
+            <a href="https://www.ai-works.site/" style="color: #F08CA6; text-decoration: none;">https://www.ai-works.site/</a>
         </p>
     </div>
 </body>
