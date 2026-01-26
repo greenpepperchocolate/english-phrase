@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { API_BASE_URL } from '../src/utils/config';
 
@@ -75,43 +75,53 @@ export default function ResetPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.icon}>🔑</Text>
-        <Text style={styles.title}>パスワードリセット</Text>
-        <Text style={styles.message}>新しいパスワードを入力してください。</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="新しいパスワード（6文字以上）"
-          placeholderTextColor="#888"
-          value={newPassword}
-          secureTextEntry
-          onChangeText={setNewPassword}
-          editable={!busy}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="新しいパスワード（確認）"
-          placeholderTextColor="#888"
-          value={confirmPassword}
-          secureTextEntry
-          onChangeText={setConfirmPassword}
-          editable={!busy}
-        />
-
-        <Pressable
-          style={[styles.button, styles.primaryButton, busy && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={busy}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {busy ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text style={styles.buttonText}>パスワードをリセット</Text>
-          )}
-        </Pressable>
-      </View>
+          <Text style={styles.icon}>🔑</Text>
+          <Text style={styles.title}>パスワードリセット</Text>
+          <Text style={styles.message}>新しいパスワードを入力してください。</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="新しいパスワード（6文字以上）"
+            placeholderTextColor="#888"
+            value={newPassword}
+            secureTextEntry
+            onChangeText={setNewPassword}
+            editable={!busy}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="新しいパスワード（確認）"
+            placeholderTextColor="#888"
+            value={confirmPassword}
+            secureTextEntry
+            onChangeText={setConfirmPassword}
+            editable={!busy}
+          />
+
+          <Pressable
+            style={[styles.button, styles.primaryButton, busy && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={busy}
+          >
+            {busy ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.buttonText}>パスワードをリセット</Text>
+            )}
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -121,10 +131,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  content: {
+  keyboardView: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 32,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   icon: {
     fontSize: 64,
