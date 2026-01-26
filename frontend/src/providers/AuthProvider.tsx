@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import type { QueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../utils/config';
+import { resetAllSeeds } from '../hooks/useFeedSeed';
 
 // ネットワークエラーアラートの重複表示を防ぐためのフラグ
 let isNetworkAlertShowing = false;
@@ -278,8 +279,11 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
       );
       const next = { ...hydrateTokens(data), userEmail: email };
       await persistTokens(next);
+      // ログイン時にフィードのシードとキャッシュをリセット（新しいランダム順序）
+      resetAllSeeds();
+      queryClient?.clear();
     },
-    [persistTokens]
+    [persistTokens, queryClient]
   );
 
   const signInAnonymously = useCallback(
@@ -299,14 +303,19 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
       }
       const next = hydrateTokens(data);
       await persistTokens(next);
+      // ゲストログイン時にフィードのシードとキャッシュをリセット（新しいランダム順序）
+      resetAllSeeds();
+      queryClient?.clear();
     },
-    [persistTokens]
+    [persistTokens, queryClient]
   );
 
   const signOut = useCallback(async () => {
     await persistTokens(null);
     // ログアウト時にReact Queryのキャッシュをクリア
     queryClient?.clear();
+    // ログアウト時にフィードのシードをリセット（次回ログイン時に新しいランダム順序）
+    resetAllSeeds();
   }, [persistTokens, queryClient]);
 
   const deleteAccount = useCallback(async () => {
@@ -326,6 +335,8 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
     await persistTokens(null);
     // アカウント削除時にReact Queryのキャッシュをクリア
     queryClient?.clear();
+    // アカウント削除時にフィードのシードをリセット
+    resetAllSeeds();
   }, [persistTokens, tokens, queryClient]);
 
   const authorizedFetch = useCallback(
