@@ -193,6 +193,10 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
 
   useEffect(() => {
     (async () => {
+      // アプリ起動時にフィードのシードとキャッシュをリセット（毎回新しいランダム順序）
+      resetAllSeeds();
+      queryClient?.clear();
+
       try {
         const stored = await SecureStore.getItemAsync(TOKEN_KEY);
         if (stored) {
@@ -205,7 +209,7 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
         setIsBootstrapping(false);
       }
     })();
-  }, []);
+  }, [queryClient]);
 
   const persistTokens = useCallback(async (next: AuthTokens | null) => {
     setTokens(next);
