@@ -915,12 +915,6 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           ))}
         </ScrollView>
 
-        {/* 横スワイプ時のローディングスピナー */}
-        {isHorizontalLoading && (
-          <View style={styles.horizontalLoadingOverlay} pointerEvents="none">
-            <ActivityIndicator size="large" color="#ffffff" />
-          </View>
-        )}
       </View>
     );
   }

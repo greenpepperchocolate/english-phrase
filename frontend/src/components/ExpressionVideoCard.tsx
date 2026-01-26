@@ -238,16 +238,6 @@ export const ExpressionVideoCard = forwardRef<ExpressionVideoCardRef, Props>(
                   }}
                   onError={handleVideoError}
                 />
-                {!videoError && (
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      styles.loadingOverlay,
-                      // isVideoLoadedがfalseの時は即座に不透明、trueの時はアニメーション値を使用
-                      { opacity: isVideoLoaded ? overlayOpacity : 1 }
-                    ]}
-                  />
-                )}
               </>
             ) : null}
 
