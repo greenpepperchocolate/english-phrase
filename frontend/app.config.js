@@ -55,7 +55,7 @@ export default {
     extra: {
       apiBaseUrl: process.env.API_BASE_URL || 'http://10.0.2.2:8000/api',
       eas: {
-        projectId: 'local',
+        projectId: '942fbebf-5724-4aa5-a297-c163b6e5b2a8',
       },
     },
   },

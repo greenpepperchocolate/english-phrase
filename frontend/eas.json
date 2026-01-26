@@ -18,15 +18,18 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "API_BASE_URL": "https://english-phrase-xsj3.onrender.com/api"
+      }
     }
   },
   "submit": {
     "production": {
       "ios": {
         "appleId": "aiworks.corporate@gmail.com",
-        "ascAppId": "",
-        "appleTeamId": ""
+        "ascAppId": "6758255504",
+        "appleTeamId": "589J74V6QR"
       }
     }
   }

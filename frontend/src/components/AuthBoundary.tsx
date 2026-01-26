@@ -48,7 +48,7 @@ function AuthScreen() {
         >
           <View style={styles.header}>
             <Image
-              source={require('../../assets/イメタンロゴ.png')}
+              source={require('../../assets/logo.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -282,6 +282,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 20,
   },
+  forgotPasswordScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 32,
+    paddingTop: 80,
+    paddingBottom: 40,
+  },
   header: {
     alignItems: 'center',
     marginBottom: 24,
@@ -450,9 +456,10 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.forgotPasswordScrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
