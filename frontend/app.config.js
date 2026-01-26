@@ -17,9 +17,12 @@ export default {
     },
     assetBundlePatterns: ['**/*'],
     ios: {
-      supportsTablet: true,
+      supportsTablet: false,
       bundleIdentifier: 'jp.aiworks.eitango',
-      buildNumber: '1',
+      buildNumber: '2',
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+      },
     },
     android: {
       adaptiveIcon: {
