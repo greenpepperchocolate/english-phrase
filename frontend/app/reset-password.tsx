@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { API_BASE_URL } from '../src/utils/config';
 
@@ -85,7 +85,11 @@ export default function ResetPasswordScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.icon}>🔑</Text>
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>パスワードリセット</Text>
           <Text style={styles.message}>新しいパスワードを入力してください。</Text>
 
@@ -140,9 +144,10 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 40,
   },
-  icon: {
-    fontSize: 64,
-    textAlign: 'center',
+  logo: {
+    width: 100,
+    height: 100,
+    alignSelf: 'center',
     marginBottom: 24,
   },
   title: {
