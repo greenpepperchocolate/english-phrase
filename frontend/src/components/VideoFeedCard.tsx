@@ -12,6 +12,7 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -915,6 +916,12 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           ))}
         </ScrollView>
 
+        {/* Android のみ: 横スワイプ時のローディングスピナー */}
+        {Platform.OS === 'android' && isHorizontalLoading && horizontalIndex > 0 && (
+          <View style={styles.horizontalLoadingOverlay} pointerEvents="none">
+            <ActivityIndicator size="large" color="#ffffff" />
+          </View>
+        )}
       </View>
     );
   }
