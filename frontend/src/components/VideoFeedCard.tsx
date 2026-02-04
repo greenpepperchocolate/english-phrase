@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { TapGestureHandler, State } from 'react-native-gesture-handler';
 import {
+  Audio,
   AVPlaybackStatus,
   AVPlaybackStatusSuccess,
   Video,
@@ -37,9 +38,11 @@ import { useUserSettings } from '../hooks/useUserSettings';
 import { useAuth } from '../providers/AuthProvider';
 import { ExpressionVideoCard, ExpressionVideoCardRef } from './ExpressionVideoCard';
 import { useVideoLoading } from '../contexts/VideoLoadingContext';
-import { getIsAudioModeReady } from '../../app/_layout';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Audio modeの初期化フラグ（グローバル）
+let isAudioModeInitialized = false;
 
 interface Props {
   phrase: PhraseSummary;
@@ -162,6 +165,20 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
         if (videoRef.current) await videoRef.current.pauseAsync();
       },
     }));
+
+    // Audio mode 初回のみ
+    useEffect(() => {
+      if (!isAudioModeInitialized) {
+        isAudioModeInitialized = true;
+        Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        }).catch((error) => {
+          console.warn('[VideoFeedCard] Failed to set audio mode:', error);
+        });
+      }
+    }, []);
 
     // ✅ タップ（再生/停止）
     const handleVideoPress = useCallback(() => {
@@ -306,19 +323,11 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
     useEffect(() => {
       if (!isActive) return;
 
-      // Audio mode初期化完了を待ってから再生
-      const waitForAudioAndPlay = async () => {
-        // Audio modeが初期化されるまで待つ（最大500ms）
-        let waited = 0;
-        while (!getIsAudioModeReady() && waited < 500) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-          waited += 50;
-        }
-
+      const timer = setTimeout(() => {
         if (isPlaying) {
           if (horizontalIndex === 0) {
+            // isVideoLoadedがtrueになるまで再生しない
             if (isVideoLoaded) {
-              console.log(`[VideoFeedCard] Playing after ${waited}ms wait, audioReady=${getIsAudioModeReady()}`);
               videoRef.current?.playAsync();
             }
             expressionVideoRefs.current.forEach((r) => r.pause());
@@ -333,9 +342,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
           videoRef.current?.pauseAsync();
           expressionVideoRefs.current.forEach((r) => r.pause());
         }
-      };
-
-      const timer = setTimeout(waitForAudioAndPlay, 100);
+      }, 100);
 
       return () => clearTimeout(timer);
     }, [isActive, isPlaying, horizontalIndex, isVideoLoaded]);
@@ -528,7 +535,7 @@ export const VideoFeedCard = forwardRef<VideoFeedCardRef, Props>(
                         left: 0,
                       }}
                       resizeMode={isLandscape === false ? ResizeMode.COVER : ResizeMode.CONTAIN}
-                      shouldPlay={false}
+                      shouldPlay={isActive && isLoadRegistered && isPlaying && shouldPlayVideo && !videoError && isVideoLoaded}
                       isLooping={false}
                       onPlaybackStatusUpdate={handlePlaybackStatus}
                       onReadyForDisplay={(e: any) => {
