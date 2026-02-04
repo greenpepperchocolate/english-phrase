@@ -2,7 +2,7 @@ export default {
   expo: {
     name: '映単語',
     slug: 'eitango',
-    version: '1.0.0',
+    version: '1.0.1',
     scheme: 'eitango',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -14,6 +14,10 @@ export default {
     },
     updates: {
       fallbackToCacheTimeout: 0,
+      url: 'https://u.expo.dev/942fbebf-5724-4aa5-a297-c163b6e5b2a8',
+    },
+    runtimeVersion: {
+      policy: 'appVersion',
     },
     assetBundlePatterns: ['**/*'],
     ios: {

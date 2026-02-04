@@ -19,6 +19,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
       "env": {
         "API_BASE_URL": "https://english-phrase-xsj3.onrender.com/api"
       }
