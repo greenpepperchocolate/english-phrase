@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Audio } from 'expo-av';
 import { AuthProvider } from '../src/providers/AuthProvider';
 import { AppQueryClientProvider, queryClient } from '../src/providers/QueryProvider';
 import { AuthBoundary } from '../src/components/AuthBoundary';
@@ -22,8 +23,32 @@ function CustomBackButton() {
   );
 }
 
+// Audio mode初期化完了フラグ（グローバル）
+let isAudioModeReady = false;
+
+export function getIsAudioModeReady() {
+  return isAudioModeReady;
+}
+
 export default function RootLayout() {
   useEffect(() => {
+    // アプリ起動時にAudio modeを設定（動画再生前に完了させる）
+    const initAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        });
+        isAudioModeReady = true;
+        console.log('[RootLayout] Audio mode initialized');
+      } catch (error) {
+        console.warn('[RootLayout] Failed to set audio mode:', error);
+        isAudioModeReady = true; // エラーでも続行
+      }
+    };
+    initAudio();
+
     if (__DEV__) {
       console.log('🔧 Development mode: Error tracking is disabled');
     }
