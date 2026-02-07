@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../src/utils/config';
+
+const TOKEN_KEY = 'eitangoTokens';
 
 export default function VerifyEmailScreen() {
   const params = useLocalSearchParams();
@@ -9,6 +12,7 @@ export default function VerifyEmailScreen() {
   const router = useRouter();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -30,8 +34,17 @@ export default function VerifyEmailScreen() {
         const data = await response.json();
 
         if (response.ok) {
-          // データベース同期のため少し待機
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // 自動ログイン: トークンが返された場合は保存
+          if (data.access_token && data.refresh_token) {
+            const tokens = {
+              accessToken: data.access_token,
+              refreshToken: data.refresh_token,
+              anonymous: false,
+              expiresAt: Date.now() + data.expires_in * 1000,
+            };
+            await SecureStore.setItemAsync(TOKEN_KEY, JSON.stringify(tokens));
+            setIsLoggedIn(true);
+          }
           setStatus('success');
           setMessage(data.message || 'メールアドレスの認証が完了しました！');
         } else {
@@ -68,9 +81,11 @@ export default function VerifyEmailScreen() {
             <Text style={styles.icon}>✅</Text>
             <Text style={styles.title}>メール認証完了！</Text>
             <Text style={styles.message}>{message}</Text>
-            <Text style={styles.subMessage}>アカウントにログインできるようになりました。</Text>
+            <Text style={styles.subMessage}>
+              {isLoggedIn ? '自動的にログインしました。' : 'アカウントにログインできるようになりました。'}
+            </Text>
             <Pressable style={styles.button} onPress={handleContinue}>
-              <Text style={styles.buttonText}>ログインへ進む</Text>
+              <Text style={styles.buttonText}>{isLoggedIn ? 'アプリを開始' : 'ログインへ進む'}</Text>
             </Pressable>
           </>
         )}

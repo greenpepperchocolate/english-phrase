@@ -211,8 +211,19 @@ class EmailVerifyView(APIView):
             # メールを確認済みにする
             verification.verify()
 
+            # 認証成功時にJWTトークンを発行（自動ログイン）
+            user = verification.user
+            jwt_token = RefreshToken.for_user(user)
+            services.get_user_settings(user)
+
             return Response(
-                {"message": "Email verified successfully. You can now log in."},
+                {
+                    "message": "Email verified successfully.",
+                    "access_token": str(jwt_token.access_token),
+                    "refresh_token": str(jwt_token),
+                    "expires_in": int(jwt_token.access_token.lifetime.total_seconds()),
+                    "anonymous": False,
+                },
                 status=status.HTTP_200_OK
             )
 
