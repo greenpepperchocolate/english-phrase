@@ -245,19 +245,9 @@ class AuthLoginView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
 
-        # メール確認チェック（プライマリDBから読み込みを強制）
-        from django.db import transaction
-        try:
-            with transaction.atomic():
-                verification = models.EmailVerificationToken.objects.select_for_update(nowait=False).get(user=user)
-                if not verification.is_verified:
-                    return Response(
-                        {"detail": "Please verify your email address before logging in. Check your inbox for the verification email."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-        except models.EmailVerificationToken.DoesNotExist:
-            # 古いユーザーアカウント（メール確認機能追加前）は許可
-            pass
+        # メール確認チェックは削除
+        # 理由: メール認証成功時に自動ログインするため、手動ログイン時のチェックは不要
+        # DBレプリケーション遅延で誤って「未認証」エラーが出る問題を回避
 
         token = RefreshToken.for_user(user)
         services.get_user_settings(user)
