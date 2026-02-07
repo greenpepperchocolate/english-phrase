@@ -60,6 +60,8 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   signUp: (payload: SignUpPayload) => Promise<SignUpResponse>;
   signIn: (payload: LoginPayload) => Promise<void>;
+  signInWithGoogle: (idToken: string) => Promise<void>;
+  signInWithApple: (identityToken: string) => Promise<void>;
   signInAnonymously: (deviceId?: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -290,6 +292,42 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
     [persistTokens, queryClient]
   );
 
+  const signInWithGoogle = useCallback(
+    async (idToken: string) => {
+      const data = await fetchJson<{ access_token: string; refresh_token: string; expires_in: number; anonymous: boolean }>(
+        '/auth/login',
+        {
+          method: 'POST',
+          body: JSON.stringify({ provider: 'google', id_token: idToken }),
+        }
+      );
+      const next = hydrateTokens(data);
+      await persistTokens(next);
+      // Googleログイン時にフィードのシードとキャッシュをリセット（新しいランダム順序）
+      resetAllSeeds();
+      queryClient?.clear();
+    },
+    [persistTokens, queryClient]
+  );
+
+  const signInWithApple = useCallback(
+    async (identityToken: string) => {
+      const data = await fetchJson<{ access_token: string; refresh_token: string; expires_in: number; anonymous: boolean }>(
+        '/auth/login',
+        {
+          method: 'POST',
+          body: JSON.stringify({ provider: 'apple', id_token: identityToken }),
+        }
+      );
+      const next = hydrateTokens(data);
+      await persistTokens(next);
+      // Appleログイン時にフィードのシードとキャッシュをリセット（新しいランダム順序）
+      resetAllSeeds();
+      queryClient?.clear();
+    },
+    [persistTokens, queryClient]
+  );
+
   const signInAnonymously = useCallback(
     async (deviceId?: string) => {
       if (__DEV__) {
@@ -389,12 +427,14 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
       isAuthenticated: !!tokens,
       signUp,
       signIn,
+      signInWithGoogle,
+      signInWithApple,
       signInAnonymously,
       signOut,
       deleteAccount,
       authorizedFetch
     }),
-    [authorizedFetch, isBootstrapping, signUp, signIn, signInAnonymously, signOut, deleteAccount, tokens]
+    [authorizedFetch, isBootstrapping, signUp, signIn, signInWithGoogle, signInWithApple, signInAnonymously, signOut, deleteAccount, tokens]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
