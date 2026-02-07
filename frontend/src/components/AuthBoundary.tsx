@@ -232,7 +232,34 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [busy, setBusy] = useState(false);
-  const { signUp } = useAuth();
+  const [showSocialAuth, setShowSocialAuth] = useState(false);
+  const { signUp, signInWithGoogle, signInWithApple } = useAuth();
+  const { signInWithApple: promptAppleSignIn, isAvailable: isAppleAvailable } = useAppleAuth();
+
+  // ソーシャル認証ボタンを遅延表示
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSocialAuth(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleAppleLogin = async () => {
+    setBusy(true);
+    try {
+      const result = await promptAppleSignIn();
+      if (result.type === 'success') {
+        await signInWithApple(result.identityToken);
+      } else if (result.type === 'error') {
+        Alert.alert('エラー', result.error || 'Appleログインに失敗しました。');
+      }
+    } catch (error: any) {
+      console.error('Apple login error:', error);
+      Alert.alert('エラー', error?.data?.detail || 'Appleログインに失敗しました。もう一度お試しください。');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleSignUp = async () => {
     if (!email || !password || !passwordConfirm) {
@@ -312,6 +339,35 @@ function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
       >
         <Text style={styles.buttonText}>{busy ? 'アカウント作成中...' : '新規登録'}</Text>
       </Pressable>
+
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>または</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      {isAppleAvailable && (
+        <Pressable
+          style={[styles.button, styles.appleButton, busy && styles.buttonDisabled]}
+          onPress={handleAppleLogin}
+          disabled={busy}
+        >
+          <View style={styles.appleButtonContent}>
+            <Text style={styles.appleIcon}></Text>
+            <Text style={styles.appleButtonText}>Appleで登録</Text>
+          </View>
+        </Pressable>
+      )}
+
+      {showSocialAuth && (
+        <Suspense fallback={null}>
+          <GoogleSignInButton
+            busy={busy}
+            setBusy={setBusy}
+            signInWithGoogle={signInWithGoogle}
+          />
+        </Suspense>
+      )}
     </View>
   );
 }
