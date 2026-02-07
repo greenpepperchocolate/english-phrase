@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../src/utils/config';
+
+const TOKEN_KEY = 'eitangoTokens';
 
 export default function VerifyEmailScreen() {
   const params = useLocalSearchParams();
@@ -30,9 +33,19 @@ export default function VerifyEmailScreen() {
         const data = await response.json();
 
         if (response.ok) {
+          // 自動ログイン: トークンが返された場合は保存
+          if (data.access_token && data.refresh_token) {
+            const tokens = {
+              accessToken: data.access_token,
+              refreshToken: data.refresh_token,
+              anonymous: false,
+              expiresAt: Date.now() + data.expires_in * 1000,
+            };
+            await SecureStore.setItemAsync(TOKEN_KEY, JSON.stringify(tokens));
+          }
           setStatus('success');
           setMessage('メールアドレスの認証が完了しました！');
-          // 認証成功後、少し待ってからログイン画面へ自動遷移
+          // 認証成功後、アプリを再起動して自動ログイン状態を反映
           setTimeout(() => {
             router.replace('/');
           }, 1500);
@@ -70,7 +83,7 @@ export default function VerifyEmailScreen() {
             <Text style={styles.icon}>✅</Text>
             <Text style={styles.title}>メール認証完了！</Text>
             <Text style={styles.message}>{message}</Text>
-            <Text style={styles.subMessage}>ログイン画面に移動しています...</Text>
+            <Text style={styles.subMessage}>自動的にログインしています...</Text>
             <ActivityIndicator size="small" color="#F08CA6" style={styles.redirectSpinner} />
           </>
         )}
