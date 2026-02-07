@@ -1,8 +1,12 @@
-﻿import { PropsWithChildren, useState } from 'react';
+import React, { PropsWithChildren, useState, useEffect, Suspense } from 'react';
 import { Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useAuth } from '../providers/AuthProvider';
+import { useAppleAuth } from '../hooks/useAppleAuth';
 import { API_BASE_URL } from '../utils/config';
+
+// Google認証ボタンを遅延ロード（起動時クラッシュ防止）
+const GoogleSignInButton = React.lazy(() => import('./GoogleSignInButton'));
 
 export function AuthBoundary({ children }: PropsWithChildren) {
   const { tokens, isBootstrapping } = useAuth();
@@ -79,7 +83,17 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const { signIn, signInAnonymously } = useAuth();
+  const [showSocialAuth, setShowSocialAuth] = useState(false);
+  const { signIn, signInWithGoogle, signInWithApple, signInAnonymously } = useAuth();
+  const { signInWithApple: promptAppleSignIn, isAvailable: isAppleAvailable } = useAppleAuth();
+
+  // ソーシャル認証ボタンを遅延表示（ネイティブモジュール初期化を待つ）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSocialAuth(true);
+    }, 500); // Google認証の遅延ロードのため少し長めに
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSignIn = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -106,6 +120,23 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
       } else {
         Alert.alert('ログイン失敗', error?.data?.detail || 'メールアドレスとパスワードをご確認ください。');
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setBusy(true);
+    try {
+      const result = await promptAppleSignIn();
+      if (result.type === 'success') {
+        await signInWithApple(result.identityToken);
+      } else if (result.type === 'error') {
+        Alert.alert('エラー', result.error || 'Appleログインに失敗しました。');
+      }
+    } catch (error: any) {
+      console.error('Apple login error:', error);
+      Alert.alert('エラー', error?.data?.detail || 'Appleログインに失敗しました。もう一度お試しください。');
     } finally {
       setBusy(false);
     }
@@ -161,6 +192,29 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
         <Text style={styles.dividerText}>または</Text>
         <View style={styles.dividerLine} />
       </View>
+
+      {isAppleAvailable && (
+        <Pressable
+          style={[styles.button, styles.appleButton, busy && styles.buttonDisabled]}
+          onPress={handleAppleLogin}
+          disabled={busy}
+        >
+          <View style={styles.appleButtonContent}>
+            <Text style={styles.appleIcon}></Text>
+            <Text style={styles.appleButtonText}>Appleでサインイン</Text>
+          </View>
+        </Pressable>
+      )}
+
+      {showSocialAuth && (
+        <Suspense fallback={null}>
+          <GoogleSignInButton
+            busy={busy}
+            setBusy={setBusy}
+            signInWithGoogle={signInWithGoogle}
+          />
+        </Suspense>
+      )}
 
       <Pressable
         style={[styles.button, styles.secondaryButton, busy && styles.buttonDisabled]}
@@ -335,6 +389,47 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F08CA6',
   },
+  appleButton: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#ffffff',
+    marginBottom: 12,
+  },
+  appleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  appleIcon: {
+    fontSize: 18,
+    color: '#ffffff',
+  },
+  appleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  googleButton: {
+    backgroundColor: '#ffffff',
+    marginBottom: 12,
+  },
+  googleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  googleIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333333',
+  },
   buttonDisabled: {
     opacity: 0.6,
   },
@@ -502,3 +597,6 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
     </SafeAreaView>
   );
 }
+
+// Google認証ボタン（遅延ロード用の別コンポーネント）
+// このコンポーネントがレンダリングされた時にのみ useGoogleAuth が呼ばれる
