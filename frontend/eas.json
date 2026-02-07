@@ -21,7 +21,9 @@
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "API_BASE_URL": "https://english-phrase-xsj3.onrender.com/api"
+        "API_BASE_URL": "https://english-phrase-xsj3.onrender.com/api",
+        "GOOGLE_CLIENT_ID_IOS": "384167074200-2llae64j272arbhca63cl815cq37o270.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_ID_WEB": "384167074200-ka1lejm0q2bnihudeghtj782obhnn0v4.apps.googleusercontent.com"
       }
     }
   },
