@@ -30,6 +30,8 @@ export default function VerifyEmailScreen() {
         const data = await response.json();
 
         if (response.ok) {
+          // データベース同期のため少し待機
+          await new Promise(resolve => setTimeout(resolve, 1000));
           setStatus('success');
           setMessage(data.message || 'メールアドレスの認証が完了しました！');
         } else {

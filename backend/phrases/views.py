@@ -237,6 +237,8 @@ class AuthLoginView(APIView):
         # メール確認チェック
         try:
             verification = models.EmailVerificationToken.objects.get(user=user)
+            # データベースから最新の状態を再読み込み（レプリケーション遅延対策）
+            verification.refresh_from_db()
             if not verification.is_verified:
                 return Response(
                     {"detail": "Please verify your email address before logging in. Check your inbox for the verification email."},
