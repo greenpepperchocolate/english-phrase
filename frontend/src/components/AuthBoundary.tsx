@@ -112,13 +112,39 @@ function SignInForm({ onForgotPassword }: { onForgotPassword: () => void }) {
       await signIn({ email: trimmedEmail, password });
     } catch (error: any) {
       console.error(error);
-      if (error?.status === 403) {
+      const status = error?.status;
+      const detail = error?.data?.detail;
+
+      if (status === 403) {
+        // メール未認証
         Alert.alert(
           'メール未認証',
-          error?.data?.detail || 'ログインする前にメールアドレスを認証してください。受信トレイで認証メールをご確認ください。'
+          'ログインする前にメールアドレスを認証してください。受信トレイで認証メールをご確認ください。'
+        );
+      } else if (status === 400 || status === 401) {
+        // 認証エラー（メールアドレスまたはパスワードが違う）
+        Alert.alert(
+          '認証エラー',
+          'メールアドレスまたはパスワードが正しくありません。'
+        );
+      } else if (status >= 500) {
+        // サーバーエラー
+        Alert.alert(
+          'サーバーエラー',
+          'サーバーで問題が発生しました。しばらく待ってから再度お試しください。'
+        );
+      } else if (error?.isNetworkError) {
+        // ネットワークエラー
+        Alert.alert(
+          'ネットワークエラー',
+          'インターネット接続を確認してください。'
         );
       } else {
-        Alert.alert('ログイン失敗', error?.data?.detail || 'メールアドレスとパスワードをご確認ください。');
+        // その他のエラー
+        Alert.alert(
+          'ログインエラー',
+          detail || '予期しないエラーが発生しました。もう一度お試しください。'
+        );
       }
     } finally {
       setBusy(false);
