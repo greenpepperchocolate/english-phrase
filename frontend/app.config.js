@@ -26,6 +26,18 @@ export default {
       buildNumber: '2',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        CFBundleURLTypes: [
+          {
+            CFBundleURLName: 'jp.aiworks.eitango',
+            CFBundleURLSchemes: ['eitango'],
+          },
+          {
+            CFBundleURLName: 'com.googleusercontent.apps.384167074200-2llae64j272arbhca63cl815cq37o270',
+            CFBundleURLSchemes: [
+              'com.googleusercontent.apps.384167074200-2llae64j272arbhca63cl815cq37o270',
+            ],
+          },
+        ],
       },
     },
     android: {
@@ -49,6 +61,14 @@ export default {
       ],
       'expo-asset',
       'expo-router',
+      'expo-web-browser',
+      'expo-apple-authentication',
+      [
+        '@react-native-google-signin/google-signin',
+        {
+          iosUrlScheme: 'com.googleusercontent.apps.384167074200-2llae64j272arbhca63cl815cq37o270',
+        },
+      ],
       // Sentry設定（本番ビルド時のみ有効化）
       // 本番ビルドを作成する際は、以下のコメントを解除してください
       // [
@@ -61,6 +81,8 @@ export default {
     ],
     extra: {
       apiBaseUrl: process.env.API_BASE_URL || 'http://10.0.2.2:8000/api',
+      googleClientIdIOS: process.env.GOOGLE_CLIENT_ID_IOS || '',
+      googleClientIdWeb: process.env.GOOGLE_CLIENT_ID_WEB || '',
       eas: {
         projectId: '942fbebf-5724-4aa5-a297-c163b6e5b2a8',
       },

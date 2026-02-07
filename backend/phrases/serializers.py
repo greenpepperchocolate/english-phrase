@@ -1,7 +1,13 @@
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+import jwt
+import requests
 
 from . import models, services
 
@@ -375,3 +381,225 @@ class ContactFormSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("Message cannot be empty or whitespace only.")
         return value
+
+
+class GoogleLoginSerializer(serializers.Serializer):
+    id_token = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        token = attrs.get("id_token")
+
+        # Google Client IDを環境変数から取得
+        client_ids = []
+        if hasattr(settings, 'GOOGLE_CLIENT_ID_IOS') and settings.GOOGLE_CLIENT_ID_IOS:
+            client_ids.append(settings.GOOGLE_CLIENT_ID_IOS)
+        if hasattr(settings, 'GOOGLE_CLIENT_ID_WEB') and settings.GOOGLE_CLIENT_ID_WEB:
+            client_ids.append(settings.GOOGLE_CLIENT_ID_WEB)
+        if hasattr(settings, 'GOOGLE_CLIENT_ID_ANDROID') and settings.GOOGLE_CLIENT_ID_ANDROID:
+            client_ids.append(settings.GOOGLE_CLIENT_ID_ANDROID)
+
+        # デバッグログ（本番確認後に削除）
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Google OAuth - client_ids count: {len(client_ids)}")
+        logger.info(f"Google OAuth - IOS configured: {bool(getattr(settings, 'GOOGLE_CLIENT_ID_IOS', ''))}")
+
+        if not client_ids:
+            raise serializers.ValidationError("Google authentication is not configured.")
+
+        try:
+            # ID Tokenを検証
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                google_requests.Request(),
+                audience=client_ids[0] if len(client_ids) == 1 else None
+            )
+
+            # 複数のClient IDがある場合、audクレームを手動でチェック
+            if len(client_ids) > 1 and idinfo.get('aud') not in client_ids:
+                raise serializers.ValidationError("Invalid audience in token.")
+
+            # メール認証されているか確認
+            if not idinfo.get('email_verified', False):
+                raise serializers.ValidationError("Email not verified by Google.")
+
+            attrs['google_user_id'] = idinfo['sub']
+            attrs['email'] = idinfo['email']
+            attrs['name'] = idinfo.get('name', '')
+
+        except ValueError as e:
+            logger.error(f"Google OAuth token validation failed: {str(e)}")
+            raise serializers.ValidationError(f"Invalid Google ID token: {str(e)}")
+
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        google_user_id = validated_data['google_user_id']
+        email = validated_data['email']
+
+        # 既存のSocialAccountを検索
+        social_account = models.SocialAccount.objects.filter(
+            provider='google',
+            provider_user_id=google_user_id
+        ).first()
+
+        if social_account:
+            # 既存のGoogleユーザー → そのままログイン
+            return social_account.user
+
+        # 同じメールアドレスの既存ユーザーを検索
+        existing_user = User.objects.filter(email__iexact=email).first()
+
+        if existing_user:
+            # 既存ユーザーにGoogleアカウントをリンク
+            models.SocialAccount.objects.create(
+                user=existing_user,
+                provider='google',
+                provider_user_id=google_user_id,
+                email=email
+            )
+            return existing_user
+
+        # 新規ユーザーを作成
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+        )
+        user.set_unusable_password()
+        user.save(update_fields=['password'])
+
+        # SocialAccountを作成
+        models.SocialAccount.objects.create(
+            user=user,
+            provider='google',
+            provider_user_id=google_user_id,
+            email=email
+        )
+
+        return user
+
+
+class AppleLoginSerializer(serializers.Serializer):
+    id_token = serializers.CharField(write_only=True)
+
+    def _get_apple_public_key(self, kid):
+        import logging
+        logger = logging.getLogger(__name__)
+        """AppleのJWKSから公開鍵を取得"""
+        response = requests.get("https://appleid.apple.com/auth/keys")
+        response.raise_for_status()
+        keys = response.json().get("keys", [])
+
+        for key in keys:
+            if key.get("kid") == kid:
+                return jwt.algorithms.RSAAlgorithm.from_jwk(key)
+
+        raise ValueError("Apple public key not found")
+
+    def validate(self, attrs):
+        token = attrs.get("id_token")
+
+        try:
+            # トークンのヘッダーからkidを取得
+            header = jwt.get_unverified_header(token)
+            kid = header.get("kid")
+
+            if not kid:
+                raise serializers.ValidationError("Invalid Apple ID token: missing kid")
+
+            # Appleの公開鍵を取得
+            public_key = self._get_apple_public_key(kid)
+
+            # トークンを検証
+            decoded = jwt.decode(
+                token,
+                public_key,
+                algorithms=["RS256"],
+                audience=settings.APPLE_BUNDLE_ID,
+                issuer="https://appleid.apple.com"
+            )
+
+            # サブジェクト（Apple User ID）を取得
+            apple_user_id = decoded.get("sub")
+            if not apple_user_id:
+                raise serializers.ValidationError("Invalid Apple ID token: missing sub")
+
+            # メールアドレスを取得（初回のみ提供される場合がある）
+            email = decoded.get("email")
+            email_verified = decoded.get("email_verified", False)
+
+            # メールが提供されている場合は検証済みかチェック
+            if email and not email_verified:
+                raise serializers.ValidationError("Email not verified by Apple.")
+
+            attrs['apple_user_id'] = apple_user_id
+            attrs['email'] = email
+
+        except jwt.ExpiredSignatureError:
+            logger.error("Apple OAuth: token has expired")
+            raise serializers.ValidationError("Apple ID token has expired")
+        except jwt.InvalidTokenError as e:
+            logger.error(f"Apple OAuth: invalid token - {str(e)}")
+            logger.error(f"Apple OAuth: APPLE_BUNDLE_ID = {settings.APPLE_BUNDLE_ID}")
+            raise serializers.ValidationError(f"Invalid Apple ID token: {str(e)}")
+        except requests.RequestException as e:
+            logger.error(f"Apple OAuth: request failed - {str(e)}")
+            raise serializers.ValidationError(f"Failed to verify Apple ID token: {str(e)}")
+
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        apple_user_id = validated_data['apple_user_id']
+        email = validated_data.get('email')
+
+        # 既存のSocialAccountを検索
+        social_account = models.SocialAccount.objects.filter(
+            provider='apple',
+            provider_user_id=apple_user_id
+        ).first()
+
+        if social_account:
+            # 既存のAppleユーザー → そのままログイン
+            return social_account.user
+
+        # メールアドレスがある場合、同じメールの既存ユーザーを検索
+        if email:
+            existing_user = User.objects.filter(email__iexact=email).first()
+
+            if existing_user:
+                # 既存ユーザーにAppleアカウントをリンク
+                models.SocialAccount.objects.create(
+                    user=existing_user,
+                    provider='apple',
+                    provider_user_id=apple_user_id,
+                    email=email or ''
+                )
+                return existing_user
+
+        # 新規ユーザーを作成
+        # Appleはメールを非公開にできるため、メールがない場合はApple User IDをベースに生成
+        if email:
+            username = email
+            user_email = email
+        else:
+            username = f"apple_{apple_user_id[:16]}"
+            user_email = f"{apple_user_id[:16]}@privaterelay.appleid.com"
+
+        user = User.objects.create_user(
+            username=username,
+            email=user_email,
+        )
+        user.set_unusable_password()
+        user.save(update_fields=['password'])
+
+        # SocialAccountを作成
+        models.SocialAccount.objects.create(
+            user=user,
+            provider='apple',
+            provider_user_id=apple_user_id,
+            email=email or ''
+        )
+
+        return user
