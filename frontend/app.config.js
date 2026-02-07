@@ -23,7 +23,7 @@ export default {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'jp.aiworks.eitango',
-      buildNumber: '2',
+      buildNumber: '3',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         CFBundleURLTypes: [
