@@ -203,3 +203,28 @@ class PasswordResetToken(TimeStampedModel):
         self.is_used = True
         self.used_at = timezone.now()
         self.save(update_fields=["is_used", "used_at", "updated_at"])
+
+
+class SocialAccount(TimeStampedModel):
+    PROVIDER_CHOICES = [
+        ("google", "Google"),
+        ("apple", "Apple"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="social_accounts"
+    )
+    provider = models.CharField(max_length=32, choices=PROVIDER_CHOICES)
+    provider_user_id = models.CharField(max_length=255)
+    email = models.EmailField(blank=True)
+
+    class Meta:
+        unique_together = ("provider", "provider_user_id")
+        indexes = [
+            models.Index(fields=["provider", "provider_user_id"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"SocialAccount<{self.provider}:{self.user.email}>"

@@ -226,10 +226,9 @@ class AuthLoginView(APIView):
     def post(self, request):
         provider = request.data.get("provider")
         if provider == "google":
-            return Response(
-                {"detail": "Google login is not yet implemented in this prototype."},
-                status=status.HTTP_501_NOT_IMPLEMENTED,
-            )
+            return self._handle_google_login(request)
+        elif provider == "apple":
+            return self._handle_apple_login(request)
 
         serializer = serializers.EmailLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -249,6 +248,44 @@ class AuthLoginView(APIView):
 
         token = RefreshToken.for_user(user)
         services.get_user_settings(user)
+        return Response(
+            {
+                "access_token": str(token.access_token),
+                "refresh_token": str(token),
+                "expires_in": int(token.access_token.lifetime.total_seconds()),
+                "anonymous": False,
+            }
+        )
+
+    def _handle_google_login(self, request):
+        serializer = serializers.GoogleLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        # ユーザー設定を作成（まだない場合）
+        services.get_user_settings(user)
+
+        # JWTトークンを発行
+        token = RefreshToken.for_user(user)
+        return Response(
+            {
+                "access_token": str(token.access_token),
+                "refresh_token": str(token),
+                "expires_in": int(token.access_token.lifetime.total_seconds()),
+                "anonymous": False,
+            }
+        )
+
+    def _handle_apple_login(self, request):
+        serializer = serializers.AppleLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        # ユーザー設定を作成（まだない場合）
+        services.get_user_settings(user)
+
+        # JWTトークンを発行
+        token = RefreshToken.for_user(user)
         return Response(
             {
                 "access_token": str(token.access_token),

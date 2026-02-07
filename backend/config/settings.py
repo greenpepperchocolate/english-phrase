@@ -200,3 +200,11 @@ APP_DEEP_LINK_SCHEME = os.environ.get("APP_DEEP_LINK_SCHEME", "")
 # Admin email for contact form submissions
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", DEFAULT_FROM_EMAIL)
 
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID_IOS = os.environ.get("GOOGLE_CLIENT_ID_IOS", "")
+GOOGLE_CLIENT_ID_WEB = os.environ.get("GOOGLE_CLIENT_ID_WEB", "")
+GOOGLE_CLIENT_ID_ANDROID = os.environ.get("GOOGLE_CLIENT_ID_ANDROID", "")
+
+# Apple Sign In Configuration
+APPLE_BUNDLE_ID = os.environ.get("APPLE_BUNDLE_ID", "jp.aiworks.eitango")
+
