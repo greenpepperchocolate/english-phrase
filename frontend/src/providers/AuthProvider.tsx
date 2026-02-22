@@ -1,5 +1,5 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import type { QueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../utils/config';
@@ -25,9 +25,6 @@ function showNetworkErrorAlert() {
     { onDismiss: () => { isNetworkAlertShowing = false; } }
   );
 }
-
-// Sentryは本番ビルド時のみ有効化
-// 開発環境では無効化（モジュール解決の問題を回避）
 
 type AuthTokens = {
   accessToken: string;
@@ -211,6 +208,26 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
         setIsBootstrapping(false);
       }
     })();
+  }, [queryClient]);
+
+  // バックグラウンドからフォアグラウンドに復帰したときにシードをリセット
+  // 短時間の離脱（通知確認等）ではリセットしない（5分以上で発動）
+  const backgroundTimestampRef = useRef<number | null>(null);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background') {
+        backgroundTimestampRef.current = Date.now();
+      } else if (nextState === 'active' && backgroundTimestampRef.current) {
+        const elapsed = Date.now() - backgroundTimestampRef.current;
+        backgroundTimestampRef.current = null;
+        if (elapsed >= 5 * 60 * 1000) {
+          resetAllSeeds();
+          queryClient?.removeQueries({ queryKey: ['feed'] });
+          queryClient?.removeQueries({ queryKey: ['favorites'] });
+        }
+      }
+    });
+    return () => subscription.remove();
   }, [queryClient]);
 
   const persistTokens = useCallback(async (next: AuthTokens | null) => {

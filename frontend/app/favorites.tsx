@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,15 +41,42 @@ export default function FavoritesScreen() {
 
   const items = useMemo(() => favorites.data?.pages.flatMap((page) => page.results) ?? [], [favorites.data]);
 
+  // メモリ節約: アクティブなインデックス周辺のみをレンダリング
+  const RENDER_WINDOW = Platform.OS === 'android' ? 2 : 3;
+  const shouldRenderItem = useCallback((index: number) => {
+    return Math.abs(index - activeIndex) <= RENDER_WINDOW;
+  }, [activeIndex]);
+
+  // 安定したコールバック用のref
+  const favoritesRef = useRef(favorites);
+  const isFetchingRef = useRef(false);
+
+  useEffect(() => {
+    favoritesRef.current = favorites;
+  }, [favorites]);
+
+  useEffect(() => {
+    isFetchingRef.current = favorites.isFetchingNextPage;
+  }, [favorites.isFetchingNextPage]);
+
   // itemsの長さを同期
-  useMemo(() => {
+  useEffect(() => {
     itemsLengthRef.current = items.length;
   }, [items.length]);
 
   // activeIndexRefを同期
-  useMemo(() => {
+  useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
+
+  // items縮小時にactiveIndexが範囲外にならないようクランプ
+  useEffect(() => {
+    if (items.length > 0 && activeIndex >= items.length) {
+      const clamped = items.length - 1;
+      setActiveIndex(clamped);
+      pagerRef.current?.setPageWithoutAnimation(clamped);
+    }
+  }, [items.length, activeIndex]);
 
   // PagerViewのページ変更ハンドラ
   const onPageSelected = useCallback(
@@ -59,33 +86,29 @@ export default function FavoritesScreen() {
         setActiveIndex(index);
 
         // 最後に近づいたら次のページをプリフェッチ
-        if (index >= itemsLengthRef.current - 3 && favorites.hasNextPage && !favorites.isFetchingNextPage) {
-          favorites.fetchNextPage();
+        if (index >= itemsLengthRef.current - 3 && favoritesRef.current.hasNextPage && !isFetchingRef.current) {
+          favoritesRef.current.fetchNextPage();
         }
       }
     },
-    [favorites]
+    []
   );
 
   const handleAutoSwipe = useCallback(() => {
     const nextIndex = activeIndexRef.current + 1;
     if (nextIndex < itemsLengthRef.current) {
       pagerRef.current?.setPage(nextIndex);
-    } else {
-      // 最後の動画に達した場合
-      if (!favorites.hasNextPage) {
-        // 次のページがない場合はクエリをリセットして再フェッチ
+    } else if (!favoritesRef.current.hasNextPage) {
+      // 最後のアイテム: 最初に戻る（データはリセットしない）
+      if (itemsLengthRef.current > 0) {
         pagerRef.current?.setPage(0);
         setActiveIndex(0);
-        // クエリをリセットして最初から再取得
-        queryClient.resetQueries({ queryKey: ['favorites'] });
       }
     }
-    // 最後に近づいたら次のページをプリフェッチ
-    if (nextIndex >= itemsLengthRef.current - 3 && favorites.hasNextPage && !favorites.isFetchingNextPage) {
-      favorites.fetchNextPage();
+    if (nextIndex >= itemsLengthRef.current - 3 && favoritesRef.current.hasNextPage && !isFetchingRef.current) {
+      favoritesRef.current.fetchNextPage();
     }
-  }, [favorites, queryClient]);
+  }, []);
 
   if (favorites.isLoading) {
     return (
@@ -136,25 +159,30 @@ export default function FavoritesScreen() {
       >
         {items.map((item, index) => (
           <View key={`${item.id}-${index}`} style={styles.page} collapsable={false}>
-            <VideoFeedCard
-              ref={(ref) => {
-                if (ref) {
-                  videoRefs.current.set(index, ref);
-                } else {
-                  videoRefs.current.delete(index);
-                }
-              }}
-              phrase={item}
-              isActive={index === activeIndex && isFocused}
-              isFavorite={item.is_favorite}
-              isMastered={item.is_mastered}
-              onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
-              onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
-              onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
-              onAutoSwipe={handleAutoSwipe}
-              isGuest={tokens?.anonymous}
-              onVerticalScrollEnabledChange={setVerticalScrollEnabled}
-            />
+            {shouldRenderItem(index) ? (
+              <VideoFeedCard
+                ref={(ref) => {
+                  if (ref) {
+                    videoRefs.current.set(index, ref);
+                  } else {
+                    videoRefs.current.delete(index);
+                  }
+                }}
+                phrase={item}
+                isActive={index === activeIndex && isFocused}
+                isFavorite={item.is_favorite}
+                isMastered={item.is_mastered}
+                onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
+                onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
+                onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
+                onAutoSwipe={handleAutoSwipe}
+                isGuest={tokens?.anonymous}
+                onVerticalScrollEnabledChange={setVerticalScrollEnabled}
+                shouldPreload={index === activeIndex + 1 && isFocused}
+              />
+            ) : (
+              <View style={styles.placeholder} />
+            )}
           </View>
         ))}
       </PagerView>
@@ -263,5 +291,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+  },
+  placeholder: {
+    flex: 1,
+    backgroundColor: '#000000',
   },
 });

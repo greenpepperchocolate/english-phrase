@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import {
-  GoogleSignin,
-  isErrorWithCode,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
 
 // iOS Client ID
 const IOS_CLIENT_ID = '384167074200-2llae64j272arbhca63cl815cq37o270.apps.googleusercontent.com';
+
+// ネイティブモジュールを動的にロード（Expo Goではnull）
+let GoogleSigninModule: any = null;
+try {
+  GoogleSigninModule = require('@react-native-google-signin/google-signin');
+} catch {
+  // Expo Goではネイティブモジュールが利用不可
+}
 
 interface GoogleSignInButtonProps {
   busy: boolean;
@@ -23,9 +26,9 @@ export default function GoogleSignInButton({
   const [isConfigured, setIsConfigured] = useState(false);
 
   useEffect(() => {
-    // Google Sign-In を設定
+    if (!GoogleSigninModule) return;
     try {
-      GoogleSignin.configure({
+      GoogleSigninModule.GoogleSignin.configure({
         iosClientId: IOS_CLIENT_ID,
       });
       setIsConfigured(true);
@@ -35,23 +38,19 @@ export default function GoogleSignInButton({
   }, []);
 
   const handleGoogleLogin = async () => {
-    if (!isConfigured) {
-      Alert.alert('エラー', 'Google認証の準備ができていません');
-      return;
-    }
+    if (!isConfigured || !GoogleSigninModule) return;
+
+    const { GoogleSignin, isErrorWithCode, statusCodes } = GoogleSigninModule;
 
     setBusy(true);
     try {
-      // Google Play Services の確認（iOSでは常にtrue）
       await GoogleSignin.hasPlayServices();
-
-      // サインイン
       const response = await GoogleSignin.signIn();
 
       if (response.type === 'success' && response.data?.idToken) {
         await signInWithGoogle(response.data.idToken);
       } else if (response.type === 'cancelled') {
-        // ユーザーがキャンセル - 何もしない
+        // ユーザーがキャンセル
       } else {
         Alert.alert('エラー', 'Googleログインに失敗しました。');
       }
@@ -59,10 +58,8 @@ export default function GoogleSignInButton({
       if (isErrorWithCode(error)) {
         switch (error.code) {
           case statusCodes.SIGN_IN_CANCELLED:
-            // ユーザーがキャンセル
             break;
           case statusCodes.IN_PROGRESS:
-            // サインイン処理中
             break;
           case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
             Alert.alert('エラー', 'Google Play Servicesが利用できません');
@@ -72,7 +69,6 @@ export default function GoogleSignInButton({
             Alert.alert('エラー', 'Googleログインに失敗しました。もう一度お試しください。');
         }
       } else {
-        // バックエンドからのエラーの場合、詳細を表示
         console.error('Google Sign-In error:', error);
         const errorDetail = error?.data?.detail || error?.data?.id_token?.[0] || error?.message || 'Googleログインに失敗しました。もう一度お試しください。';
         Alert.alert('エラー', errorDetail);
@@ -82,7 +78,8 @@ export default function GoogleSignInButton({
     }
   };
 
-  if (!isConfigured) {
+  // ネイティブモジュールが利用不可（Expo Go）または未設定の場合は非表示
+  if (!GoogleSigninModule || !isConfigured) {
     return null;
   }
 

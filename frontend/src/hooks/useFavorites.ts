@@ -71,7 +71,7 @@ export function useFavorites() {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    refetchOnMount: false,
+    refetchOnMount: true,
     retry: (failureCount, error) => {
       if (error instanceof Error && error.name === 'AbortError') return false;
       if (failureCount >= 3) return false;

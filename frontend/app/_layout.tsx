@@ -7,11 +7,8 @@ import { AuthProvider } from '../src/providers/AuthProvider';
 import { AppQueryClientProvider, queryClient } from '../src/providers/QueryProvider';
 import { AuthBoundary } from '../src/components/AuthBoundary';
 import { VideoLoadingProvider } from '../src/contexts/VideoLoadingContext';
+import { AppErrorBoundary } from '../src/components/AppErrorBoundary';
 
-// Sentryの初期化は本番ビルド時のみ
-// 開発環境では依存関係の問題を避けるため無効化
-// 本番ビルドを作成する際は、app.config.jsでSentryプラグインを設定してください
-// 詳細: https://docs.sentry.io/platforms/react-native/
 
 function CustomBackButton() {
   const router = useRouter();
@@ -29,6 +26,7 @@ export default function RootLayout() {
     }
   }, []);
   return (
+    <AppErrorBoundary>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider queryClient={queryClient}>
         <AppQueryClientProvider>
@@ -121,6 +119,7 @@ export default function RootLayout() {
         </AppQueryClientProvider>
       </AuthProvider>
     </GestureHandlerRootView>
+    </AppErrorBoundary>
   );
 }
 

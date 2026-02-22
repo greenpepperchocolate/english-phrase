@@ -105,10 +105,12 @@ export function useToggleFavorite() {
         if (data) queryClient.setQueryData(queryKey, data);
       });
     },
-    // 成功時も失敗時も、バックグラウンドで静かにデータを同期（refetchはしない）
-    onSettled: () => {
-      // 動画再生を妨げないため、invalidateQueriesは行わない
-      // 次回のフィード読み込み時に最新データが取得される
+    onSettled: (_data, _error, payload) => {
+      if (payload.on) {
+        // お気に入り追加時のみリストを再取得（一覧に新アイテムを反映）
+        // 削除時は楽観的更新で即座にリストから消えるためrefetch不要
+        queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      }
     },
   });
 }

@@ -1,9 +1,10 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   TextInput,
   StyleSheet,
   ActivityIndicator,
+  Platform,
   Text,
   Pressable,
 } from 'react-native';
@@ -50,13 +51,31 @@ export default function SearchScreen() {
 
   const items = useMemo(() => search.data?.pages.flatMap((page) => page.results) ?? [], [search.data]);
 
+  // メモリ節約: アクティブなインデックス周辺のみをレンダリング
+  const RENDER_WINDOW = Platform.OS === 'android' ? 2 : 3;
+  const shouldRenderItem = useCallback((index: number) => {
+    return Math.abs(index - activeIndex) <= RENDER_WINDOW;
+  }, [activeIndex]);
+
+  // 安定したコールバック用のref
+  const searchRef = useRef(search);
+  const isFetchingRef = useRef(false);
+
+  useEffect(() => {
+    searchRef.current = search;
+  }, [search]);
+
+  useEffect(() => {
+    isFetchingRef.current = search.isFetchingNextPage;
+  }, [search.isFetchingNextPage]);
+
   // itemsの長さを同期
-  useMemo(() => {
+  useEffect(() => {
     itemsLengthRef.current = items.length;
   }, [items.length]);
 
   // activeIndexRefを同期
-  useMemo(() => {
+  useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
 
@@ -68,32 +87,28 @@ export default function SearchScreen() {
         setActiveIndex(index);
 
         // 最後に近づいたら次のページをプリフェッチ
-        if (index >= itemsLengthRef.current - 3 && search.hasNextPage && !search.isFetchingNextPage) {
-          search.fetchNextPage();
+        if (index >= itemsLengthRef.current - 3 && searchRef.current.hasNextPage && !isFetchingRef.current) {
+          searchRef.current.fetchNextPage();
         }
       }
     },
-    [search]
+    []
   );
 
   const handleAutoSwipe = useCallback(() => {
     const nextIndex = activeIndexRef.current + 1;
     if (nextIndex < itemsLengthRef.current) {
       pagerRef.current?.setPage(nextIndex);
-    } else {
-      // 最後の動画に達した場合
-      if (!search.hasNextPage) {
-        // 次のページがない場合はクエリをリセットして再フェッチ
+    } else if (!searchRef.current.hasNextPage) {
+      if (itemsLengthRef.current > 0) {
         pagerRef.current?.setPage(0);
         setActiveIndex(0);
-        // クエリをリセットして最初から再取得
-        queryClient.resetQueries({ queryKey: ['search'] });
       }
     }
-    if (nextIndex >= itemsLengthRef.current - 5 && search.hasNextPage && !search.isFetchingNextPage) {
-      search.fetchNextPage();
+    if (nextIndex >= itemsLengthRef.current - 5 && searchRef.current.hasNextPage && !isFetchingRef.current) {
+      searchRef.current.fetchNextPage();
     }
-  }, [search, queryClient]);
+  }, []);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -145,25 +160,30 @@ export default function SearchScreen() {
           >
             {items.map((item, index) => (
               <View key={String(item.id)} style={styles.page} collapsable={false}>
-                <VideoFeedCard
-                  ref={(ref) => {
-                    if (ref) {
-                      videoRefs.current.set(index, ref);
-                    } else {
-                      videoRefs.current.delete(index);
-                    }
-                  }}
-                  phrase={item}
-                  isActive={index === activeIndex && isFocused}
-                  isFavorite={item.is_favorite}
-                  isMastered={item.is_mastered}
-                  onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
-                  onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
-                  onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
-                  onAutoSwipe={handleAutoSwipe}
-                  isGuest={tokens?.anonymous}
-                  onVerticalScrollEnabledChange={setVerticalScrollEnabled}
-                />
+                {shouldRenderItem(index) ? (
+                  <VideoFeedCard
+                    ref={(ref) => {
+                      if (ref) {
+                        videoRefs.current.set(index, ref);
+                      } else {
+                        videoRefs.current.delete(index);
+                      }
+                    }}
+                    phrase={item}
+                    isActive={index === activeIndex && isFocused}
+                    isFavorite={item.is_favorite}
+                    isMastered={item.is_mastered}
+                    onPress={() => router.push({ pathname: '/phrase/[id]', params: { id: String(item.id) } })}
+                    onToggleFavorite={(next) => toggleFavorite.mutate({ phraseId: item.id, on: next })}
+                    onToggleMastered={(next) => toggleMastered.mutate({ phraseId: item.id, on: next })}
+                    onAutoSwipe={handleAutoSwipe}
+                    isGuest={tokens?.anonymous}
+                    onVerticalScrollEnabledChange={setVerticalScrollEnabled}
+                    shouldPreload={index === activeIndex + 1 && isFocused}
+                  />
+                ) : (
+                  <View style={styles.placeholder} />
+                )}
               </View>
             ))}
           </PagerView>
@@ -326,5 +346,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+  },
+  placeholder: {
+    flex: 1,
+    backgroundColor: '#000000',
   },
 });

@@ -26,7 +26,7 @@ export function ErrorFallback({ error, onRetry, message }: ErrorFallbackProps) {
     if (isOffline) {
       return 'インターネット接続がありません\nWi-Fiまたはモバイルデータをオンにしてください';
     }
-    if (error?.message.includes('Failed to fetch') || error?.message.includes('Network request failed')) {
+    if (error?.message?.includes('Failed to fetch') || error?.message?.includes('Network request failed')) {
       return 'サーバーに接続できません\nしばらくしてからもう一度お試しください';
     }
     return 'エラーが発生しました\nもう一度お試しください';
