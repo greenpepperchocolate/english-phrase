@@ -2,7 +2,7 @@ export default {
   expo: {
     name: '映単語',
     slug: 'eitango',
-    version: '1.0.1',
+    version: '1.0.2',
     scheme: 'eitango',
     orientation: 'portrait',
     icon: './assets/icon.png',
