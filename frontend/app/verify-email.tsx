@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../src/utils/config';
-
-const TOKEN_KEY = 'eitangoTokens';
+import { useAuth } from '../src/providers/AuthProvider';
 
 export default function VerifyEmailScreen() {
   const params = useLocalSearchParams();
   const token = typeof params.token === 'string' ? params.token : params.token?.[0];
   const router = useRouter();
+  const { signInWithTokenData } = useAuth();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState('');
 
@@ -33,19 +32,13 @@ export default function VerifyEmailScreen() {
         const data = await response.json();
 
         if (response.ok) {
-          // 自動ログイン: トークンが返された場合は保存
+          // 自動ログイン: AuthProviderのstate + SecureStore両方を更新
           if (data.access_token && data.refresh_token) {
-            const tokens = {
-              accessToken: data.access_token,
-              refreshToken: data.refresh_token,
-              anonymous: false,
-              expiresAt: Date.now() + data.expires_in * 1000,
-            };
-            await SecureStore.setItemAsync(TOKEN_KEY, JSON.stringify(tokens));
+            await signInWithTokenData(data);
           }
           setStatus('success');
           setMessage('メールアドレスの認証が完了しました！');
-          // 認証成功後、アプリを再起動して自動ログイン状態を反映
+          // 認証成功後、メイン画面に遷移（AuthProviderのstateが更新済みなのでそのままログイン状態）
           setTimeout(() => {
             router.replace('/');
           }, 1500);
@@ -61,7 +54,7 @@ export default function VerifyEmailScreen() {
     };
 
     verifyEmail();
-  }, [token, router]);
+  }, [token, router, signInWithTokenData]);
 
   const handleContinue = () => {
     router.replace('/');

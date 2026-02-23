@@ -2,7 +2,7 @@ export default {
   expo: {
     name: '映単語',
     slug: 'eitango',
-    version: '1.0.2',
+    version: '1.0.3',
     scheme: 'eitango',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -41,6 +41,7 @@ export default {
       },
     },
     android: {
+      package: 'jp.aiworks.eitango',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',

@@ -60,6 +60,7 @@ type AuthContextValue = {
   signInWithGoogle: (idToken: string) => Promise<void>;
   signInWithApple: (identityToken: string) => Promise<void>;
   signInAnonymously: (deviceId?: string) => Promise<void>;
+  signInWithTokenData: (data: { access_token: string; refresh_token: string; expires_in: number }) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   authorizedFetch: <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -369,6 +370,16 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
     [persistTokens, queryClient]
   );
 
+  const signInWithTokenData = useCallback(
+    async (data: { access_token: string; refresh_token: string; expires_in: number }) => {
+      const next = hydrateTokens({ ...data, anonymous: false });
+      await persistTokens(next);
+      resetAllSeeds();
+      queryClient?.clear();
+    },
+    [persistTokens, queryClient]
+  );
+
   const signOut = useCallback(async () => {
     await persistTokens(null);
     // ログアウト時にReact Queryのキャッシュをクリア
@@ -426,9 +437,18 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
         if (error instanceof ApiError && (error.status === 401 || error.status === 400)) {
           const refreshed = await refreshTokens();
           if (!refreshed) {
+            await persistTokens(null);
             throw error;
           }
-          return doFetch(refreshed.accessToken);
+          try {
+            return await doFetch(refreshed.accessToken);
+          } catch (retryError) {
+            // リフレッシュ後も401なら、アカウント削除やトークン無効化 → 強制ログアウト
+            if (retryError instanceof ApiError && retryError.status === 401) {
+              await persistTokens(null);
+            }
+            throw retryError;
+          }
         }
         throw error;
       }
@@ -447,11 +467,12 @@ export function AuthProvider({ children, queryClient }: { children: ReactNode; q
       signInWithGoogle,
       signInWithApple,
       signInAnonymously,
+      signInWithTokenData,
       signOut,
       deleteAccount,
       authorizedFetch
     }),
-    [authorizedFetch, isBootstrapping, signUp, signIn, signInWithGoogle, signInWithApple, signInAnonymously, signOut, deleteAccount, tokens]
+    [authorizedFetch, isBootstrapping, signUp, signIn, signInWithGoogle, signInWithApple, signInAnonymously, signInWithTokenData, signOut, deleteAccount, tokens]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
