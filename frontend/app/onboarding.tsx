@@ -102,6 +102,25 @@ function HorizontalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
         <Text style={tutorialStyles.headerSubtitle}>
           左右にスワイプしてWord/Phraseを切り替え
         </Text>
+        {!hasCompleted && (
+          <Animated.View
+            style={[tutorialStyles.headerArrow, {
+              transform: [{
+                translateX: arrowAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -20],
+                }),
+              }],
+            }]}
+          >
+            <Text style={tutorialStyles.arrowText}>←</Text>
+          </Animated.View>
+        )}
+        {hasCompleted && (
+          <View style={tutorialStyles.headerSuccess}>
+            <Text style={tutorialStyles.successText}>✓ 完了！</Text>
+          </View>
+        )}
       </View>
 
       {/* タブバー */}
@@ -143,32 +162,6 @@ function HorizontalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
         </Animated.View>
       </View>
 
-      {/* スワイプ指示 */}
-      {!hasCompleted && (
-        <View style={tutorialStyles.instruction}>
-          <Animated.View
-            style={{
-              transform: [
-                {
-                  translateX: arrowAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, -20],
-                  }),
-                },
-              ],
-            }}
-          >
-            <Text style={tutorialStyles.arrowText}>←</Text>
-          </Animated.View>
-          <Text style={tutorialStyles.instructionText}>左にスワイプ</Text>
-        </View>
-      )}
-
-      {hasCompleted && (
-        <View style={tutorialStyles.successBadge}>
-          <Text style={tutorialStyles.successText}>✓ 完了！</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -259,6 +252,25 @@ function VerticalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
         <Text style={tutorialStyles.headerSubtitle}>
           上にスワイプして次の動画へ
         </Text>
+        {!hasCompleted && (
+          <Animated.View
+            style={[tutorialStyles.headerArrow, {
+              transform: [{
+                translateY: arrowAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -15],
+                }),
+              }],
+            }]}
+          >
+            <Text style={tutorialStyles.arrowText}>↑</Text>
+          </Animated.View>
+        )}
+        {hasCompleted && (
+          <View style={tutorialStyles.headerSuccess}>
+            <Text style={tutorialStyles.successText}>✓ 完了！</Text>
+          </View>
+        )}
       </View>
 
       {/* 動画エリア */}
@@ -295,32 +307,6 @@ function VerticalSwipeTutorial({ onComplete }: { onComplete: () => void }) {
         </Animated.View>
       </View>
 
-      {/* スワイプ指示 */}
-      {!hasCompleted && (
-        <View style={tutorialStyles.instruction}>
-          <Animated.View
-            style={{
-              transform: [
-                {
-                  translateY: arrowAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, -15],
-                  }),
-                },
-              ],
-            }}
-          >
-            <Text style={tutorialStyles.arrowText}>↑</Text>
-          </Animated.View>
-          <Text style={tutorialStyles.instructionText}>上にスワイプ</Text>
-        </View>
-      )}
-
-      {hasCompleted && (
-        <View style={tutorialStyles.successBadge}>
-          <Text style={tutorialStyles.successText}>✓ 完了！</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -428,11 +414,20 @@ export default function OnboardingScreen() {
         </Text>
       </View>
 
-      {/* ボタンエリア - 最後のスライドで縦スワイプ完了時のみ表示 */}
+      {/* ボタンエリア - 最後のスライドで縦スワイプ完了時のみ「はじめる」表示 */}
       {isLastSlide && verticalTutorialDone && (
         <View style={[styles.buttonContainer, { paddingBottom: insets.bottom + 24 }]}>
           <Pressable style={styles.startButton} onPress={handleComplete}>
             <Text style={styles.startButtonText}>はじめる</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* スキップボタン - 「はじめる」非表示時のみ表示 */}
+      {!(isLastSlide && verticalTutorialDone) && (
+        <View style={[styles.skipWrapper, { bottom: insets.bottom }]} pointerEvents="box-none">
+          <Pressable style={styles.skipButton} onPress={handleComplete}>
+            <Text style={styles.skipButtonText}>スキップ</Text>
           </Pressable>
         </View>
       )}
@@ -519,6 +514,25 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   startButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  skipWrapper: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  skipButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+  skipButtonText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '700',
@@ -618,23 +632,16 @@ const tutorialStyles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
   },
-  instruction: {
-    alignItems: 'center',
-    paddingVertical: 24,
+  headerArrow: {
+    marginTop: 16,
+  },
+  headerSuccess: {
+    marginTop: 16,
   },
   arrowText: {
     fontSize: 40,
     color: '#F08CA6',
     fontWeight: '300',
-  },
-  instructionText: {
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 8,
-  },
-  successBadge: {
-    alignItems: 'center',
-    paddingVertical: 24,
   },
   successText: {
     fontSize: 24,
