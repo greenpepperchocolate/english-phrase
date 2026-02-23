@@ -51,13 +51,6 @@ export default function RootLayout() {
                 headerShown: false,
               }}
             />
-            <Stack.Screen
-              name="onboarding"
-              options={{
-                headerShown: false,
-                gestureEnabled: false,
-              }}
-            />
             <Stack.Screen name="phrase/[id]" options={{ title: '' }} />
             <Stack.Screen
               name="favorites"
